@@ -13,7 +13,7 @@ router.register(r'FieldObjects', FieldbjectListAPIView , basename = 'fieldObject
 router.register(r'objects', ObjectViewSet , basename = 'objects' )
 
 # Get data the fields the diferent objects
-router.register(r'getFieldObject', FieldCoreCustomViewSet , basename = 'objectsCustom' )
+router.register(r'FieldObject', FieldCoreCustomViewSet , basename = 'objectsCustom' )
 
 # Get data the objects of databases
 router.register(r'getDataObject', DataObjectCustomViewSet , basename = 'objectsCustom' )

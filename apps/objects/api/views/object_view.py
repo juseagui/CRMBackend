@@ -1,14 +1,22 @@
+#package rest_framework
 from rest_framework import generics
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.parsers import JSONParser
 
 from apps.objects.api.serializers.object_serializers import ObjectSerializer,FieldSerializer, FieldCaptureSerializer
 from apps.objects.models import Object, Field
-from apps.objects.utils.models.object_model import ObjectModelRaw
+
+#package personality querys bd and mixins
+from apps.objects.mixins.models.object_model import ObjectModelRaw
+from apps.objects.mixins.validateField_mixins import validateField
+
+#package bd django
 from django.db.models import F
 from django.db.models import Q
 import json
+
 
 
 # -------------------------------------------------------------------------------------------------
@@ -42,25 +50,18 @@ class ObjectViewSet( viewsets.ModelViewSet ):
             return Response({'message':'Objeto Eliminado'},  status = status.HTTP_200_OK  )
         return Response({'error':'No existe un producto con estos datos'},  status = status.HTTP_400_BAD_REQUEST )
 
-    def update( self, request,pk=None ):
-        if self.get_queryset(pk):
-            object_serializer = self.serializer_class( self.get_queryset(pk), data = request.data )
-
-            if object_serializer.is_valid():
-                object_serializer.save()
-                return Response( object_serializer.data, status = status.HTTP_200_OK )
-            return Response( object_serializer.errors , status = status.HTTP_400_BAD_REQUEST )
     
 
 # -----------------------------------------------------------------------------------------------------
-# Custom Field Get list visible
-# -- router : getFieldObject
+# Custom Field Get and Create 
+# -- router : FieldObject
 # -- params: visible 
 #------------------------------------------------------------------------------------------------------
 
 class FieldCoreCustomViewSet( viewsets.ModelViewSet ):
     serializer_class = FieldSerializer
-    http_method_names = ['get']
+    http_method_names = ['get','post']
+    parser_classes = (JSONParser,)
     permission_classes = (IsAuthenticated,)
 
     def get_serializer_class(self):
@@ -82,7 +83,6 @@ class FieldCoreCustomViewSet( viewsets.ModelViewSet ):
         self.get_serializer_class()
         
         #filters query
-        #print(self.request.query_params.get('visible'))
         visible = self.request.query_params.get('visible')
         capture = self.request.query_params.get('capture')
         detail = self.request.query_params.get('detail')
@@ -118,6 +118,47 @@ class FieldCoreCustomViewSet( viewsets.ModelViewSet ):
         # Query Get Fields of object
         object_serializer = self.get_serializer( fieldObject, many = True ).data
         return Response( object_serializer, status = status.HTTP_200_OK )
+
+    def create(self, request):
+        
+        idObje = self.request.query_params.get('object')
+        data = request.data
+        #print(idObje, request.data)
+        
+        if(idObje != None):
+            
+            dataObject = Field.objects.filter( 
+            object_field = idObje
+             ).values(
+                'name','type','order', 'type_relation', 'capture', 'required'
+                ).annotate( 
+                    model = F('object_field__model')).order_by('order')
+            
+            if(dataObject):
+                validateFieldData = validateField(idObje, dataObject)
+                validateFieldData.validateListField(data)
+
+                if not validateFieldData.getFieldError():
+                    modelRawObject = ObjectModelRaw()
+                    
+                    #insert new data in the model
+                    responsePostDataObject = modelRawObject.postDataObject( validateFieldData.getModel(), 
+                                                                             validateFieldData.getStringInsert(),
+                                                                             validateFieldData.getStringValues() )
+
+                    if(responsePostDataObject.status == 'OK'):
+                        return Response({},  status = status.HTTP_201_CREATED )
+                    else:
+                        return Response({'error': 'error in query'  },  status = status.HTTP_400_BAD_REQUEST )    
+                
+                else:
+                    return Response({'error': 'error in validate', 'detailError' : validateFieldData.getFieldError() },  
+                                    status = status.HTTP_400_BAD_REQUEST )  
+
+            else:
+                return Response({'error': 'object not valid' },  status = status.HTTP_400_BAD_REQUEST )    
+        else:
+            return Response({'error': 'param object is required' },  status = status.HTTP_400_BAD_REQUEST )    
 
 
 

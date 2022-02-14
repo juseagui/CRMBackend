@@ -88,4 +88,24 @@ class ObjectModelRaw(object):
             cursor.close()
         return responseReturn
 
+    """
+    insert information dynamically from a specific table
+    """
+    def postDataObject(self, model, fields, values):
+        with connection.cursor() as cursor:
+            try:
+                query = "INSERT INTO "+model+" ("+fields+")"
+                query += "VALUES ("+values+")"
+             
+                cursor.execute( query )
+                results = []
+                responseReturn = ResponseDataQuery('OK','',results)
+            except Exception as err:
+                  msg = 'Failure in executing query {0}. Error: {1}'.format(query, err)
+                  responseReturn = ResponseDataQuery('ERROR',msg, None)
+            
+            cursor.close()
+        return responseReturn
+
+
 
