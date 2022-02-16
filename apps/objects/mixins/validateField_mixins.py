@@ -13,6 +13,8 @@ class validateField:
         self.stringInsert = ""
         self.stringValues = ""
         self.stringUpdate = ""
+        # ---------------------------------
+        self.pkName = ""
     
     # getter function and setter function
     def getFieldError(self):
@@ -26,6 +28,14 @@ class validateField:
     def getStringValues(self):
         # Do something if you want
         return self.stringValues
+
+    def getStringUpdate(self):
+        # Do something if you want
+        return self.stringUpdate
+    
+    def getPkName(self):
+        # Do something if you want
+        return self.pkName
     
     def getModel(self):
         # Do something if you want
@@ -43,14 +53,18 @@ class validateField:
                 if(self.model == ""):
                     self.model = itemFieldProperty.get('model')
 
-                nameExist = data[itemFieldProperty.get('name')]
-                value = nameExist
+                try:
+                    value = data[itemFieldProperty.get('name')]
+                except:
+                    value = ""
+
                 valid = self.validateFieldType( itemFieldProperty,value )
 
                 if(valid):
                     self.generateQueryTransation( itemFieldProperty, value )
             else:
                 existPrimaryKey = True
+                self.pkName = itemFieldProperty.get('name')
 
         if(not existPrimaryKey):
             msg = "Primary key is not parameterized"
@@ -60,17 +74,17 @@ class validateField:
             }  })
 
         self.refactorQueryInsert()
-        #self.refactorQueryUpdate()
+        self.refactorQueryupdate()
 
     
     
     def validateFieldType(self, fieldProperty, value, **kwargs):
         
-        #print(fieldProperty ,value )
+        if(value == None ):
+            value = ""
 
         if( fieldProperty.get('required') == '1' ):
-            print(fieldProperty.get('name'), value)
-            if(value == "" or value == None ):
+            if(value == ""):
                 msg = "Field is required || not empty"
                 self.fieldError.append({ fieldProperty.get('name') : {
                     'error' : True,
@@ -101,7 +115,16 @@ class validateField:
                     'msg'   : msg
                 }  })
                 return False
-        
+
+
+        #Validate String
+        if( len(value) > fieldProperty.get('number_charac') ):
+            msg = "the length of the text exceeds that of the field - allowed length : "+str(fieldProperty.get('number_charac'))
+            self.fieldError.append({ fieldProperty.get('name') : {
+                'error' : True,
+                'msg'   : msg
+            }  })
+            return False
         
         return True
 
@@ -113,17 +136,22 @@ class validateField:
         #validate type num
         if(value == "" or value == None):
             self.stringValues += "NULL"
+            self.stringUpdate += fieldProperty.get('name')+" = NULL,"
             return
 
         if( fieldProperty.get('type') != 5 ):
             self.stringValues += "'"+value+"',"
+            self.stringUpdate += fieldProperty.get('name')+" = "+"'"+value+"',"
         else:
             self.stringValues += value+","
+            self.stringUpdate += fieldProperty.get('name')+" = "+value+","
 
 
     def refactorQueryInsert(self):
         self.stringInsert += "created_date, modified_date, deleted_date"
         self.stringValues += "NOW(), NOW(), NOW()"
-        
+    
+    def refactorQueryupdate(self):
+        self.stringUpdate += "modified_date = NOW()"
 
        

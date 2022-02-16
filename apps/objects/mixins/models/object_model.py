@@ -6,7 +6,7 @@ Class for response standar in model RAW Query
 in the view
 """ 
 class ResponseDataQuery(object):
-    def __init__(self, status, msg, data):
+    def __init__(self, status, msg = "", data = []):
         self.status = status
         self.msg = msg
         self.data = data
@@ -96,7 +96,6 @@ class ObjectModelRaw(object):
             try:
                 query = "INSERT INTO "+model+" ("+fields+")"
                 query += "VALUES ("+values+")"
-             
                 cursor.execute( query )
                 results = []
                 responseReturn = ResponseDataQuery('OK','',results)
@@ -108,4 +107,21 @@ class ObjectModelRaw(object):
         return responseReturn
 
 
+    """
+    update partial information dynamically from a specific table
+    """
+    def updateDataObject (self, model, fields, pkName, pk):
+        with connection.cursor() as cursor:
+            try:
+                query = "UPDATE "+model+" SET "
+                query += fields+" WHERE  "+pkName+" = "+pk
+                cursor.execute( query )
+                results = []
+                responseReturn = ResponseDataQuery('OK','',results)
+            except Exception as err:
+                msg = 'Failure in executing query {0}. Error: {1}'.format(query, err)
+                responseReturn = ResponseDataQuery('ERROR',msg, None)
+            
+            cursor.close()
+        return responseReturn
 

@@ -60,7 +60,7 @@ class ObjectViewSet( viewsets.ModelViewSet ):
 
 class FieldCoreCustomViewSet( viewsets.ModelViewSet ):
     serializer_class = FieldSerializer
-    http_method_names = ['get','post']
+    http_method_names = ['get','post','patch']
     parser_classes = (JSONParser,)
     permission_classes = (IsAuthenticated,)
 
@@ -130,7 +130,7 @@ class FieldCoreCustomViewSet( viewsets.ModelViewSet ):
             dataObject = Field.objects.filter( 
             object_field = idObje
              ).values(
-                'name','type','order', 'type_relation', 'capture', 'required'
+                'name','type','order', 'type_relation', 'capture', 'required', 'number_charac'
                 ).annotate( 
                     model = F('object_field__model')).order_by('order')
             
@@ -159,6 +159,48 @@ class FieldCoreCustomViewSet( viewsets.ModelViewSet ):
                 return Response({'error': 'object not valid' },  status = status.HTTP_400_BAD_REQUEST )    
         else:
             return Response({'error': 'param object is required' },  status = status.HTTP_400_BAD_REQUEST )    
+
+    def partial_update(self,  request, pk = None,):
+        
+        idObje = self.request.query_params.get('object')
+        data = request.data
+
+        if(idObje != None):
+            
+            dataObject = Field.objects.filter( 
+            object_field = idObje
+             ).values(
+                'name','type','order', 'type_relation', 'capture', 'required', 'number_charac'
+                ).annotate( 
+                    model = F('object_field__model')).order_by('order')
+
+            if(dataObject):
+                validateFieldData = validateField(idObje, dataObject)
+                validateFieldData.validateListField(data)
+            
+                if not validateFieldData.getFieldError():
+                        modelRawObject = ObjectModelRaw()
+                        
+                        #insert new data in the model
+                        responseUpdateDataObject = modelRawObject.updateDataObject( validateFieldData.getModel(), 
+                                                                                validateFieldData.getStringUpdate(),
+                                                                                validateFieldData.getPkName(),
+                                                                                pk )
+
+                        if(responseUpdateDataObject.status == 'OK'):
+                            return Response({},  status = status.HTTP_204_NO_CONTENT )
+                        else:
+                            return Response({'error': 'error in query'  },  status = status.HTTP_400_BAD_REQUEST )
+
+                else:   
+                        return Response({'error': 'error in validate', 'detailError' : validateFieldData.getFieldError() },  
+                                        status = status.HTTP_400_BAD_REQUEST )
+
+            else:
+                 return Response({'error': 'object not valid' },  status = status.HTTP_400_BAD_REQUEST )    
+
+        else:
+            return Response({'error': 'param object is required' },  status = status.HTTP_400_BAD_REQUEST )   
 
 
 
@@ -217,7 +259,6 @@ class DataObjectCustomViewSet( viewsets.ModelViewSet ):
         return Response({'error': responseDataObject.msg },  status = status.HTTP_400_BAD_REQUEST )
 
 
-
 # -----------------------------------------------------------------------------------------------------
 #  Get detail item in Object
 # -- router : getDetailItemObject
@@ -239,7 +280,7 @@ class DataDetailItemObjectViewSet( viewsets.ModelViewSet ):
             data = Field.objects.filter( 
                   ( Q(detail='1') |  Q(type_relation='1')  ), object_field = idObje
                 ).values(
-                    'name','description', 'type','order','visible','detail', 'type_relation' , 'object_group','required', 'columns'
+                    'name','description', 'type','order','visible','detail', 'type_relation' , 'object_group','required', 'columns', 'number_charac'
                     ).annotate( 
                         model = F('object_field__model'),
                         representation = F('object_field__representation'),
