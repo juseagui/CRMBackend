@@ -44,15 +44,18 @@ class ObjectModelRaw(object):
     """
     get information dynamically from a specific table
     """
-    def getDataObject(self, model, fields, offset = 0, limit = 15, pkName = None, pk = None, representation = None ):
+    def getDataObject(self, model, modelAlias, fields, offset = 0, limit = 15, pkName = None, pk = None, representation = None, join = "" ):
         with connection.cursor() as cursor:
             try:
-                query = "SELECT "+pkName+" AS pk ,"+fields+" , created_date, modified_date  "
+                query = "SELECT "+pkName+" AS pk ,"+fields+" , "+modelAlias+".created_date, "+modelAlias+".modified_date  "
                 
                 if representation:
                     query += ","+representation+" AS representation" 
 
-                query += " FROM "+model+" "
+                query += " FROM "+model+" "+modelAlias+" "
+
+                if(join):
+                    query += join
 
                 if(offset and limit):
                     query += "LIMIT "+offset+","+limit+" "
@@ -60,7 +63,7 @@ class ObjectModelRaw(object):
                 if(pk):
                     query += "WHERE "+pkName+" = "+pk
 
-
+                print(query)
                 cursor.execute( query )
                 results = self.dictfetchall(cursor)
                 responseReturn = ResponseDataQuery('OK','',results)
@@ -115,6 +118,7 @@ class ObjectModelRaw(object):
             try:
                 query = "UPDATE "+model+" SET "
                 query += fields+" WHERE  "+pkName+" = "+pk
+                print(query)
                 cursor.execute( query )
                 results = []
                 responseReturn = ResponseDataQuery('OK','',results)

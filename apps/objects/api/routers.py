@@ -1,5 +1,5 @@
 from rest_framework.routers import DefaultRouter
-from apps.objects.api.views.object_view import ObjectViewSet, FieldCoreCustomViewSet, DataObjectCustomViewSet, DataDetailItemObjectViewSet
+from apps.objects.api.views.object_view import ObjectViewSet, FieldCoreCustomViewSet, DataObjectCustomViewSet, DataDetailItemObjectViewSet, objectsPermissionsCustomViewSet
 from apps.objects.api.views.general_view import *
 
 router = DefaultRouter()
@@ -11,6 +11,7 @@ router.register(r'FieldObjects', FieldbjectListAPIView , basename = 'fieldObject
 
 # Get Objects
 router.register(r'objects', ObjectViewSet , basename = 'objects' )
+router.register(r'objectsPermissions', objectsPermissionsCustomViewSet , basename = 'objectsPermissions' )
 
 # Get data the fields the diferent objects
 router.register(r'FieldObject', FieldCoreCustomViewSet , basename = 'objectsCustom' )
