@@ -5,7 +5,7 @@ from apps.base.models import BaseModel
 class CategoryObject(BaseModel):
     name = models.CharField('Name', max_length=25,blank = False,null = False,unique = True)
     description = models.CharField('Description', max_length=50,blank = False,null = False,unique = False)
-    icon = models.ImageField('Imagen de Categoria Objetos', upload_to='objects/',blank = True,null = True)
+    icon = models.CharField('Icon', max_length=50, blank = True,null = True)
 
     class Meta:
         """Meta definition for MeasureUnit."""
