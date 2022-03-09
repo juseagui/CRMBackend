@@ -8,7 +8,7 @@ from apps.objects.models import Field, Object, Group, List, ValueList, CategoryO
 
 class FilteredObjectSerializer(serializers.ListSerializer):
     def to_representation(self, data):
-        data = data.filter(state=True, object_rol__isnull = True ).order_by('order')
+        data = data.filter(state=True, object_rol__isnull = True ).order_by('sort')
         return super(FilteredObjectSerializer, self).to_representation(data)
 
 class PermissionSerializer (serializers.ModelSerializer):
@@ -53,7 +53,7 @@ class ObjectCustomSerializer (serializers.ModelSerializer):
 class GroupCustomSerializer (serializers.ModelSerializer):
      class Meta:
         model = Group
-        fields  = ('id','name','order','state')
+        fields  = ('id','name','sort','state')
 
 class ValueListSerializer (serializers.ModelSerializer):
      class Meta:
@@ -72,7 +72,7 @@ class FieldSerializer (serializers.ModelSerializer):
 
     class Meta:
         model = Field
-        ordering = ['order']
+        ordering = ['sort']
         exclude  = ('created_date','modified_date','deleted_date' )  
 
 

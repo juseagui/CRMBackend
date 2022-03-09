@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import JSONParser
 from django.db import connection
 
-from apps.objects.api.serializers.object_serializers import ObjectSerializer,FieldSerializer, FieldCaptureSerializer, ObjectPermissionsSerializer,CategoryObjectSerializer
+from apps.objects.api.serializers.object_serializers import ObjectSerializer,FieldSerializer, FieldCaptureSerializer
 from apps.objects.models import Object, Field
 
 #package personality querys bd and mixins
@@ -31,7 +31,7 @@ class ObjectViewSet( viewsets.ModelViewSet ):
     permission_classes = (IsAuthenticated,)
     
     def get_queryset( self, pk = None ):
-        return self.get_serializer().Meta.model.objects.filter( state = True ).order_by('order')
+        return self.get_serializer().Meta.model.objects.filter( state = True ).order_by('sort')
 
     def list( self, request):
         object_serializer = self.get_serializer( self.get_queryset(), many = True )
@@ -55,29 +55,6 @@ class ObjectViewSet( viewsets.ModelViewSet ):
             product.save()
             return Response({'message':'Objeto Eliminado'},  status = status.HTTP_200_OK  )
         return Response({'error':'No existe un producto con estos datos'},  status = status.HTTP_400_BAD_REQUEST )
-
-
-# -----------------------------------------------------------------------------------------------------
-# Get Permisions categoris and object
-# -- router : objectsPermissions
-#------------------------------------------------------------------------------------------------------
-
-class objectsPermissionsCustomViewSet( viewsets.ModelViewSet ):
-    serializer_class = CategoryObjectSerializer
-    http_method_names = ['get']
-    parser_classes = (JSONParser,)
-    permission_classes = (IsAuthenticated,)
-
-    def get_queryset( self, pk = None ):
-       return self.get_serializer().Meta.model.objects.filter(state= True)
-
-    def list( self, request):
-        object_serializer = self.get_serializer( self.get_queryset(), many = True )
-
-        return Response( {'cid' : str(uuid.uuid4()),
-                         'status' : 'success',
-                         'timestamp' : datetime.now().strftime("%m-%d-%Y %H:%M:%S"),
-                         'data' : object_serializer.data }, status = status.HTTP_200_OK )
         
 
 # -----------------------------------------------------------------------------------------------------
@@ -117,7 +94,7 @@ class FieldCoreCustomViewSet( viewsets.ModelViewSet ):
                 object_field = pk, 
                 visible = visible,
                 state = 1
-            ).order_by('order')
+            ).order_by('sort')
 
         elif(capture):
             action = self.request.query_params.get('action')
@@ -126,7 +103,7 @@ class FieldCoreCustomViewSet( viewsets.ModelViewSet ):
                 return self.get_serializer().Meta.model.objects.filter( 
                     object_field = pk, 
                     state = 1,
-                ).order_by('object_group__order','order')
+                ).order_by('object_group__sort','sort')
             else:
                 return self.get_serializer().Meta.model.objects.exclude(
                type_relation = 1
@@ -134,18 +111,8 @@ class FieldCoreCustomViewSet( viewsets.ModelViewSet ):
                 object_field = pk, 
                 capture = capture,
                 state = 1,
-            ).order_by('object_group__order','order')
-        
-        """else:
-            return self.get_serializer().Meta.model.objects.exclude(
-                group_field__type_relation = 1
-            ).filter( 
-                state = True, 
-                object_group = pk,
-                group_field__capture = 1,
-                group_field__state = 1,
-                group_field__type_relation = None
-                ).order_by('order','group_field__order')"""
+            ).order_by('object_group__sort','sort')
+     
 
     def retrieve(self, request, pk=None):
         fieldObject = self.get_queryset( pk)
@@ -194,22 +161,34 @@ class FieldCoreCustomViewSet( viewsets.ModelViewSet ):
                 #get data of model
                 responseDataObject = modelRawObject.getDataObject( modelDefault, modelAlias, nameField, None, None, pkName, pkModel, representation, join )
                 
-                jsonData = []
-                for itemFieldValue in data:
-                    #exclude pk if not detail
-                    if(itemFieldValue.get('capture') == '1'):
-                        itemFielTemp = itemFieldValue
-                        #create list temp
-                        if(itemFieldValue.get('type') == 7):
-                            valueObject = { 'description' : responseDataObject.data[0].get(itemFieldValue.get('name')),
-                                            'code'        :  responseDataObject.data[0].get("code_"+itemFieldValue.get('name'))   }
-                        else:
-                            valueObject = responseDataObject.data[0].get(itemFieldValue.get('name'))
-                        
-                        itemFielTemp['value'] = valueObject
-                        itemFielTemp['representation'] = responseDataObject.data[0].get(representation)
-                        #add value in json
-                        jsonData.append(itemFielTemp)
+                if( responseDataObject.data != None ):
+
+                    jsonData = []
+                    for itemFieldValue in data:
+                        #exclude pk if not detail
+                        if(itemFieldValue.get('capture') == '1'):
+                            itemFielTemp = itemFieldValue
+                            #create list temp
+                            if(itemFieldValue.get('type') == 7):
+                                valueObject = { 'description' : responseDataObject.data[0].get(itemFieldValue.get('name')),
+                                                'code'        :  responseDataObject.data[0].get("code_"+itemFieldValue.get('name'))   }
+                            else:
+                                valueObject = responseDataObject.data[0].get(itemFieldValue.get('name'))
+                            
+                            itemFielTemp['value'] = valueObject
+                            itemFielTemp['representation'] = responseDataObject.data[0].get(representation)
+                            #add value in json
+                            jsonData.append(itemFielTemp)
+                
+                else:
+
+                    return Response({'cid' : str(uuid.uuid4()),
+                                'status' : 'error',
+                                'timestamp' : datetime.now().strftime("%m-%d-%Y %H:%M:%S"),
+                                'data' : [],
+                                'error': 'The Query is None',
+                                'detailError' : [] }, status = status.HTTP_400_BAD_REQUEST )
+
 
             #final process action edit
             respAditional = {
@@ -238,9 +217,9 @@ class FieldCoreCustomViewSet( viewsets.ModelViewSet ):
             dataObject = Field.objects.filter( 
             object_field = idObje
              ).values(
-                'name','type','order', 'type_relation', 'capture', 'required', 'number_charac'
+                'name','type','sort', 'type_relation', 'capture', 'required', 'number_charac'
                 ).annotate( 
-                    model = F('object_field__model')).order_by('order')
+                    model = F('object_field__model')).order_by('sort')
             
             if(dataObject):
                 validateFieldData = validateField(idObje, dataObject)
@@ -300,9 +279,9 @@ class FieldCoreCustomViewSet( viewsets.ModelViewSet ):
             dataObject = Field.objects.filter( 
             object_field = idObje
              ).values(
-                'name','type','order', 'type_relation', 'capture', 'required', 'number_charac'
+                'name','type','sort', 'type_relation', 'capture', 'required', 'number_charac'
                 ).annotate( 
-                    model = F('object_field__model')).order_by('order')
+                    model = F('object_field__model')).order_by('sort')
 
             if(dataObject):
                 validateFieldData = validateField(idObje, dataObject)
@@ -366,9 +345,9 @@ class DataObjectCustomViewSet( viewsets.ModelViewSet ):
         data = Field.objects.filter( 
             object_field = pk, visible = '1'
              ).values(
-                'name','type','order','visible', 'type_relation', 'object_list_id'
+                'name','type','sort','visible', 'type_relation', 'object_list_id'
                 ).annotate( 
-                    model = F('object_field__model')).order_by('order')
+                    model = F('object_field__model')).order_by('sort')
 
         # process data for get data in the object DB model
         if list(data)[0]:
@@ -391,7 +370,7 @@ class DataObjectCustomViewSet( viewsets.ModelViewSet ):
                 if( itemField.get('type') == 7 and itemField.get('object_list_id') != None ):
                     nameField += "valuelist_"+nameFieldBD+".description "+nameFieldBD
                     join += " LEFT JOIN objects_valuelist valuelist_"+nameFieldBD+" "
-                    join += " ON valuelist_"+nameFieldBD+".code = "+modelAlias+"."+nameFieldBD+" AND valuelist_"+nameFieldBD+".list_id = 1 "
+                    join += " ON valuelist_"+nameFieldBD+".code = "+modelAlias+"."+nameFieldBD+" AND valuelist_"+nameFieldBD+".list_id = " + str(itemField.get('object_list_id'))
                 else: 
                     nameField += modelAlias+"."+nameFieldBD
 
@@ -455,13 +434,13 @@ class DataDetailItemObjectViewSet( viewsets.ModelViewSet ):
             data = Field.objects.filter( 
                   ( Q(detail='1') |  Q(type_relation='1')  ), object_field = idObje
                 ).values(
-                    'name','description', 'type','order','visible','detail', 'type_relation' , 
+                    'name','description', 'type','sort','visible','detail', 'type_relation' , 
                     'object_group','required', 'columns', 'number_charac', 'object_list_id'
                     ).annotate( 
                         model = F('object_field__model'),
                         representation = F('object_field__representation'),
                         group_name = F('object_group__name')
-                        ).order_by('object_group__order','order')
+                        ).order_by('object_group__sort','sort')
             
             # process data for get data in the object DB model
             if list(data)[0]:
@@ -484,10 +463,13 @@ class DataDetailItemObjectViewSet( viewsets.ModelViewSet ):
                 
                     #validate relation for List
                     if( itemField.get('type') == 7 and itemField.get('object_list_id') != None ):
+                        
+                        print(itemField.get('object_list_id'))
+
                         nameField += "valuelist_"+nameFieldBD+".description "+nameFieldBD
                         nameField += ","+modelAlias+"."+nameFieldBD+" code_"+nameFieldBD
                         join += " LEFT JOIN objects_valuelist valuelist_"+nameFieldBD+" "
-                        join += " ON valuelist_"+nameFieldBD+".code = "+modelAlias+"."+nameFieldBD+" AND valuelist_"+nameFieldBD+".list_id = 1 "
+                        join += " ON valuelist_"+nameFieldBD+".code = "+modelAlias+"."+nameFieldBD+" AND valuelist_"+nameFieldBD+".list_id = "+ str(itemField.get('object_list_id'))
                     else: 
                         nameField += modelAlias+"."+nameFieldBD
 
@@ -499,36 +481,47 @@ class DataDetailItemObjectViewSet( viewsets.ModelViewSet ):
                
                 #get data of model
                 responseDataObject = modelRawObject.getDataObject( modelDefault, modelAlias, nameField, None, None, pkName, pk, representation, join )
+                
+                if( responseDataObject.data != None ):
 
-                jsonData = []
-                arrGroup = dict()
-                for itemFieldValue in list(data):
-                    #exclude pk if not detail
-                    if(itemFieldValue.get('detail') == '1'):
-                        itemFielTemp = itemFieldValue
-                        #create list temp
-                        arrGroup['id'] = itemFielTemp['object_group']
-                        arrGroup['name'] = itemFielTemp['group_name']
-                        itemFielTemp['value'] = responseDataObject.data[0].get(itemFieldValue.get('name'))
-                        itemFielTemp['code'] = responseDataObject.data[0].get("code_"+itemFieldValue.get('name'))
-                        itemFielTemp['representation'] = responseDataObject.data[0].get(itemFieldValue.get('representation'))
-                        itemFielTemp['object_group'] = arrGroup
-                        #add value in json
-                        jsonData.append(itemFielTemp)
-                        arrGroup = dict()
+                    jsonData = []
+                    arrGroup = dict()
+                    for itemFieldValue in list(data):
+                        #exclude pk if not detail
+                        if(itemFieldValue.get('detail') == '1'):
+                            itemFielTemp = itemFieldValue
+                            #create list temp
+                            arrGroup['id'] = itemFielTemp['object_group']
+                            arrGroup['name'] = itemFielTemp['group_name']
+                            itemFielTemp['value'] = responseDataObject.data[0].get(itemFieldValue.get('name'))
+                            itemFielTemp['code'] = responseDataObject.data[0].get("code_"+itemFieldValue.get('name'))
+                            itemFielTemp['representation'] = responseDataObject.data[0].get(itemFieldValue.get('representation'))
+                            itemFielTemp['object_group'] = arrGroup
+                            #add value in json
+                            jsonData.append(itemFielTemp)
+                            arrGroup = dict()
 
-                #validate Response
-                if(responseDataObject.status == 'OK'):
-                    return Response( { 'created_date' : responseDataObject.data[0].get('created_date'),
-                                       'modified_date' : responseDataObject.data[0].get('modified_date'),
-                                       'data' : jsonData },  status = status.HTTP_200_OK )
+                    #validate Response
+                    if(responseDataObject.status == 'OK'):
+                        return Response( { 'created_date' : responseDataObject.data[0].get('created_date'),
+                                        'modified_date' : responseDataObject.data[0].get('modified_date'),
+                                        'data' : jsonData },  status = status.HTTP_200_OK )
+                    else:
+                        return Response({'cid' : str(uuid.uuid4()),
+                                    'status' : 'error validate fields',
+                                    'timestamp' : datetime.now().strftime("%m-%d-%Y %H:%M:%S"),
+                                    'data' : [],
+                                    'error': responseDataObject.msg ,
+                                    'detailError' : [] }, status = status.HTTP_400_BAD_REQUEST )
+
                 else:
                     return Response({'cid' : str(uuid.uuid4()),
-                                'status' : 'error validate fields',
+                                'status' : 'error',
                                 'timestamp' : datetime.now().strftime("%m-%d-%Y %H:%M:%S"),
                                 'data' : [],
-                                'error': responseDataObject.msg ,
+                                'error': 'The Query is None',
                                 'detailError' : [] }, status = status.HTTP_400_BAD_REQUEST )
+
         
         return Response({'cid' : str(uuid.uuid4()),
                                 'status' : 'error',

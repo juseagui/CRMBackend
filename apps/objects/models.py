@@ -24,7 +24,7 @@ class Object(BaseModel):
     icon = models.CharField('Icon', max_length=50, blank = True,null = True)
     category_object = models.ForeignKey(CategoryObject, on_delete=models.CASCADE, verbose_name = 'category_object', related_name= 'category_object')
     view = models.CharField('View', max_length=150, blank = True,null = True)
-    order = models.IntegerField('Order',  blank = True,null = True)
+    sort = models.IntegerField('Sort',  blank = True,null = True)
     model = models.CharField('Model Database', max_length=150, unique = False,blank = False,null = False)
 
     #ubication in system
@@ -48,7 +48,7 @@ class Group(BaseModel):
 
     name = models.CharField('Nombre del grupo', max_length=150, unique = True,blank = False,null = False)
     object_group = models.ForeignKey(Object, on_delete=models.CASCADE, verbose_name = 'Objeto')
-    order = models.IntegerField('Order',  blank = True,null = True)
+    sort = models.IntegerField('Sort',  blank = True,null = True)
 
     class Meta:
         """Meta definition for Group."""
@@ -85,7 +85,7 @@ class Field(BaseModel):
     hint = models.CharField('Hint Field', max_length=200, unique = False,blank = True,null = True)
     type = models.IntegerField('Type',  blank = False,null = False)
     type_relation = models.IntegerField('TypeRelation',  blank = True,null = True)
-    order = models.IntegerField('Order',  blank = True,null = True)
+    sort = models.IntegerField('Sort',  blank = True,null = True)
 
     #---------------------------------------------------------------------------------
     # Relation table FK
@@ -115,7 +115,7 @@ class Field(BaseModel):
 
         verbose_name = 'Field'
         verbose_name_plural = 'Fields'
-        ordering = ['order']
+        ordering = ['sort']
 
     def __str__(self):
         """Unicode representation of Field."""
@@ -126,8 +126,8 @@ class Field(BaseModel):
 class ValueList(BaseModel):
 
     description = models.CharField('Description Value of List', max_length=150, unique = False,blank = False,null = False)
-    code = models.CharField('Code Value of List', max_length=50, unique = True,blank = False,null = False)
-    order = models.IntegerField('Order Value')
+    code = models.CharField('Code Value of List', max_length=50, unique = False,blank = False,null = False)
+    sort = models.IntegerField('Order Value')
     list = models.ForeignKey(List, on_delete=models.CASCADE,related_name= 'ListValues',  verbose_name = 'ListValues', )
 
     class Meta:
@@ -137,7 +137,7 @@ class ValueList(BaseModel):
         constraints = [
             models.UniqueConstraint(fields=['code', 'list'], name='unique ValueList')
         ]
-        ordering = ['order']
+        ordering = ['sort']
 
     def __str__(self):
         """Unicode representation of ValueList."""

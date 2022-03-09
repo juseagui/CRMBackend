@@ -47,10 +47,10 @@ class ObjectModelRaw(object):
     def getDataObject(self, model, modelAlias, fields, offset = 0, limit = 15, pkName = None, pk = None, representation = None, join = "" ):
         with connection.cursor() as cursor:
             try:
-                query = "SELECT "+pkName+" AS pk ,"+fields+" , "+modelAlias+".created_date, "+modelAlias+".modified_date  "
+                query = "SELECT "+modelAlias+"."+pkName+" AS pk ,"+fields+" , "+modelAlias+".created_date, "+modelAlias+".modified_date  "
                 
                 if representation:
-                    query += ","+representation+" AS representation" 
+                    query += ","+representation+" AS representation " 
 
                 query += " FROM "+model+" "+modelAlias+" "
 
@@ -58,10 +58,10 @@ class ObjectModelRaw(object):
                     query += join
 
                 if(offset and limit):
-                    query += "LIMIT "+offset+","+limit+" "
+                    query += " LIMIT "+offset+","+limit+" "
 
                 if(pk):
-                    query += "WHERE "+pkName+" = "+pk
+                    query += " WHERE "+modelAlias+"."+pkName+" = "+pk
 
                 print(query)
                 cursor.execute( query )
