@@ -46,7 +46,7 @@ class Object(BaseModel):
 # Create your models here.
 class Group(BaseModel):
 
-    name = models.CharField('Nombre del grupo', max_length=150, unique = True,blank = False,null = False)
+    name = models.CharField('Nombre del grupo', max_length=150, unique = False,blank = False,null = False)
     object_group = models.ForeignKey(Object, on_delete=models.CASCADE, verbose_name = 'Objeto')
     sort = models.IntegerField('Sort',  blank = True,null = True)
 
@@ -93,6 +93,7 @@ class Field(BaseModel):
     object_field = models.ForeignKey(Object, on_delete=models.CASCADE,related_name= 'fields' , verbose_name = 'Object')
     object_group = models.ForeignKey(Group, on_delete=models.CASCADE,related_name= 'group_field',  verbose_name = 'Group')
     object_list = models.ForeignKey(List, on_delete=models.CASCADE,related_name= 'lists',  verbose_name = 'List', blank = True,null = True)
+    object_relationship = models.ForeignKey(Object, on_delete=models.CASCADE,related_name= 'relationship',  verbose_name = 'Relationship', blank = True,null = True)
 
     
     #initial information display
@@ -180,6 +181,28 @@ class Permission(BaseModel):
         """Meta definition for rol_permission."""
         verbose_name = 'Rol permission'
         verbose_name_plural = 'Rols permission'
+    def __str__(self):
+        """Unicode representation of Rol."""
+        return self.description
+
+
+# ------------------------------------------------------------
+#-------- MODEL OBJECT RELATIONSHIP
+#-------------------------------------------------------------
+
+class Relationship(BaseModel):
+    
+    description = models.CharField('Description Relationship', max_length=150, unique = False,blank = False,null = False)
+    object_parent = models.ForeignKey(Object, on_delete=models.CASCADE,related_name= 'object_parent' , verbose_name = 'object_parent')
+    object_child = models.ForeignKey(Object, on_delete=models.CASCADE,related_name= 'object_child' , verbose_name = 'object_child')
+
+    #detail of functionality
+    visible = models.CharField('Visible', max_length=50, blank = True,null = True)
+
+    class Meta:
+        """Meta definition for relationship."""
+        verbose_name = 'Relation Object'
+        verbose_name_plural = 'Relationship Object'
     def __str__(self):
         """Unicode representation of Rol."""
         return self.description

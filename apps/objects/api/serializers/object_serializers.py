@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from apps.objects.models import Field, Object, Group, List, ValueList, CategoryObject, Permission
+from apps.objects.models import Field, Object, Group, List, ValueList, CategoryObject, Permission , Relationship
 
 
 # ------------------------------------------------------------
@@ -32,7 +32,6 @@ class CategoryObjectSerializer (serializers.ModelSerializer):
         exclude  = ('created_date','modified_date','deleted_date' )
         
 
-
 # ------------------------------------------------------------
 #-------- SERIALIZERS CORE 
 #--------------------------------------------------------------
@@ -48,7 +47,7 @@ class ObjectCustomSerializer (serializers.ModelSerializer):
     #fields = serializers.StringRelatedField( many=True )
     class Meta:
         model = Object
-        fields  = ('id','model','representation','name') 
+        fields  = ('id','model','representation','name','description','icon') 
 
 class GroupCustomSerializer (serializers.ModelSerializer):
      class Meta:
@@ -66,23 +65,10 @@ class ListSerializer (serializers.ModelSerializer):
         model = List
         exclude  = ('created_date','modified_date','deleted_date' ) 
 
-
-class FieldSerializer (serializers.ModelSerializer):
-    object_field = ObjectCustomSerializer()
-
+class RelationshipSerializer (serializers.ModelSerializer):
     class Meta:
-        model = Field
-        ordering = ['sort']
-        exclude  = ('created_date','modified_date','deleted_date' )  
-
-
-class FieldCaptureSerializer (serializers.ModelSerializer):
-    object_field = ObjectCustomSerializer()
-    object_group = GroupCustomSerializer()
-    object_list = ListSerializer()
-    class Meta:
-        model = Field
-        exclude  = ('created_date','modified_date','deleted_date' )  
+        model = Relationship
+        exclude  = ('state','created_date','modified_date','deleted_date' )
 
 
 

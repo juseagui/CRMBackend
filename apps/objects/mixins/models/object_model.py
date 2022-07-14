@@ -44,26 +44,31 @@ class ObjectModelRaw(object):
     """
     get information dynamically from a specific table
     """
-    def getDataObject(self, model, modelAlias, fields, offset = 0, limit = 15, pkName = None, pk = None, representation = None, join = "" ):
+    def getDataObject(self, model, modelAlias, fields, offset = 0, limit = 15, pkName = None, pk = None, representation = None, join = "", conditional = None ):
         with connection.cursor() as cursor:
             try:
                 query = "SELECT "+modelAlias+"."+pkName+" AS pk ,"+fields+" , "+modelAlias+".created_date, "+modelAlias+".modified_date  "
                 
                 if representation:
-                    query += ","+representation+" AS representation " 
+                    query += ","+representation+" AS representation_core " 
 
                 query += " FROM "+model+" "+modelAlias+" "
 
                 if(join):
                     query += join
 
+                if(pk or conditional ):
+                    query += " WHERE "
+                    aditionalQuery = ""
+                    if(pk):
+                        query += " "+modelAlias+"."+pkName+" = "+pk
+                        aditionalQuery += " AND "
+                    if(conditional):
+                        query += aditionalQuery+conditional
+
                 if(offset and limit):
                     query += " LIMIT "+offset+","+limit+" "
-
-                if(pk):
-                    query += " WHERE "+modelAlias+"."+pkName+" = "+pk
-
-                print(query)
+                    
                 cursor.execute( query )
                 results = self.dictfetchall(cursor)
                 responseReturn = ResponseDataQuery('OK','',results)
@@ -77,10 +82,14 @@ class ObjectModelRaw(object):
     """
     get count item in the model DB
     """
-    def getCountDataObject(self, model ):
+    def getCountDataObject(self, model, conditional = None ):
         with connection.cursor() as cursor:
             try:
                 query = "SELECT COUNT(1) count FROM "+model+" "
+
+                if( conditional ):
+                    query += " WHERE "+ conditional
+
                 cursor.execute( query )
                 results = self.dictfetchall(cursor)
                 responseReturn = ResponseDataQuery('OK','',results)
@@ -129,3 +138,45 @@ class ObjectModelRaw(object):
             cursor.close()
         return responseReturn
 
+
+    """
+    get table in system
+    """
+    def getTableSystem(self, model ):
+        with connection.cursor() as cursor:
+            try:
+                query  = "SELECT TABLE_NAME FROM information_schema.tables "
+                query += "WHERE  TABLE_NAME = '"+model+"' "
+                cursor.execute( query )
+                results = self.dictfetchall(cursor)
+                responseReturn = ResponseDataQuery('OK','',results)
+            except Exception as err:
+                  msg = 'Failure in executing query {0}. Error: {1}'.format(query, err)
+                  responseReturn = ResponseDataQuery('ERROR',msg, None)
+            
+            cursor.close()
+        return responseReturn
+
+    
+    """
+    create table in system
+    """
+    def postTableSystem(self, model ):
+        with connection.cursor() as cursor:
+            try:
+                query  = "CREATE TABLE IF NOT EXISTS "+model+" ( "
+                query += " id INT AUTO_INCREMENT PRIMARY KEY, "
+                query += " state tinyint(1), "
+                query += " created_date date, "
+                query += " modified_date date "
+                query += " ) "
+                print(query)
+                cursor.execute( query )
+                results = []
+                responseReturn = ResponseDataQuery('OK','',results)
+            except Exception as err:
+                  msg = 'Failure in executing query {0}. Error: {1}'.format(query, err)
+                  responseReturn = ResponseDataQuery('ERROR',msg, None)
+            
+            cursor.close()
+        return responseReturn

@@ -116,9 +116,8 @@ class validateField:
                 }  })
                 return False
 
-
-        #Validate String
-        if( len(value) > fieldProperty.get('number_charac') ):
+        #Validate String        
+        if( len(str(value)) > fieldProperty.get('number_charac') ):
             msg = "the length of the text exceeds that of the field - allowed length : "+str(fieldProperty.get('number_charac'))
             self.fieldError.append({ fieldProperty.get('name') : {
                 'error' : True,
@@ -143,8 +142,8 @@ class validateField:
             self.stringValues += "'"+value+"',"
             self.stringUpdate += fieldProperty.get('name')+" = "+"'"+value+"',"
         else:
-            self.stringValues += value+","
-            self.stringUpdate += fieldProperty.get('name')+" = "+value+","
+            self.stringValues += str(value)+","
+            self.stringUpdate += fieldProperty.get('name')+" = "+str(value)+","
 
 
     def refactorQueryInsert(self):
