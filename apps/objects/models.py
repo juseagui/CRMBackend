@@ -102,6 +102,8 @@ class Field(BaseModel):
     capture = models.CharField('Capture', max_length=50, blank = False,null = False)
     #information display in detail
     detail = models.CharField('Detail', max_length=50, blank = False,null = False)
+    #information display in detail
+    edit = models.CharField('Edit', max_length=50, blank = False,null = False)
     
     #---------------------------------------------------------------------------------
     #props field

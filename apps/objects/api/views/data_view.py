@@ -190,7 +190,7 @@ class DataObjectCustomViewSet( viewsets.ModelViewSet ):
         if(idObje != None):
             
             dataObject = Field.objects.filter( 
-            object_field = idObje
+            object_field = idObje, state = True
              ).values(
                 'name','type','sort', 'type_relation', 'capture', 'required', 'number_charac'
                 ).annotate( 

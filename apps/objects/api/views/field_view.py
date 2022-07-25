@@ -120,7 +120,7 @@ class FieldViewSet( viewsets.ModelViewSet ):
                             nameField += "valuelist_"+nameFieldBD+".description "+nameFieldBD
                             nameField += ","+modelAlias+"."+nameFieldBD+" code_"+nameFieldBD
                             join += " LEFT JOIN objects_valuelist valuelist_"+nameFieldBD+" "
-                            join += " ON valuelist_"+nameFieldBD+".code = "+modelAlias+"."+nameFieldBD+" AND valuelist_"+nameFieldBD+".list_id = 1 "
+                            join += " ON valuelist_"+nameFieldBD+".code = "+modelAlias+"."+nameFieldBD+" AND valuelist_"+nameFieldBD+".list_id = " + str(itemField.get('object_list').get('id'))
                         else: 
                             nameField += modelAlias+"."+nameFieldBD
 
@@ -142,7 +142,7 @@ class FieldViewSet( viewsets.ModelViewSet ):
                             #create list temp
                             if(itemFieldValue.get('type') == 7):
                                 valueObject = { 'description' : responseDataObject.data[0].get(itemFieldValue.get('name')),
-                                                'code'        :  responseDataObject.data[0].get("code_"+itemFieldValue.get('name'))   }
+                                                'code'        :  str(responseDataObject.data[0].get("code_"+itemFieldValue.get('name')))   }
                             else:
                                 valueObject = responseDataObject.data[0].get(itemFieldValue.get('name'))
                             
@@ -152,7 +152,6 @@ class FieldViewSet( viewsets.ModelViewSet ):
                             jsonData.append(itemFielTemp)
                 
                 else:
-
                     return Response({'cid' : str(uuid.uuid4()),
                                 'status' : 'error',
                                 'timestamp' : datetime.now().strftime("%m-%d-%Y %H:%M:%S"),

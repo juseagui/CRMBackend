@@ -68,7 +68,7 @@ class ObjectModelRaw(object):
 
                 if(offset and limit):
                     query += " LIMIT "+offset+","+limit+" "
-                    
+                
                 cursor.execute( query )
                 results = self.dictfetchall(cursor)
                 responseReturn = ResponseDataQuery('OK','',results)
@@ -108,6 +108,7 @@ class ObjectModelRaw(object):
             try:
                 query = "INSERT INTO "+model+" ("+fields+")"
                 query += "VALUES ("+values+")"
+                print(query)
                 cursor.execute( query )
                 results = []
                 responseReturn = ResponseDataQuery('OK','',results)
@@ -168,9 +169,10 @@ class ObjectModelRaw(object):
                 query += " id INT AUTO_INCREMENT PRIMARY KEY, "
                 query += " state tinyint(1), "
                 query += " created_date date, "
-                query += " modified_date date "
+                query += " modified_date date, "
+                query += " deleted_date date "
                 query += " ) "
-                print(query)
+                
                 cursor.execute( query )
                 results = []
                 responseReturn = ResponseDataQuery('OK','',results)
