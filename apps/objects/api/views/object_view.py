@@ -89,11 +89,13 @@ class ObjectViewSet( viewsets.ModelViewSet ):
                                 firstField['visible'] = '1'
                                 firstField['capture'] = '0'
                                 firstField['detail'] = '0'
+                                firstField['edit'] = '0'
                                 firstField['required'] = '1'
-                                firstField['number_charac'] = 10
+                                firstField['number_charac'] = 11
                                 firstField['columns'] = 3
 
                                 serializerField = FieldSerializer( data = firstField )
+
                                 if serializerField.is_valid():
                                     serializerField.save()
 
