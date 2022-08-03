@@ -35,8 +35,11 @@ class DataObjectCustomViewSet( viewsets.ModelViewSet ):
              ).values(
                 'name','type','sort','visible', 'type_relation', 'object_list_id','object_relationship_id'
                 ).annotate( 
-                    model = F('object_field__model')).order_by('sort')
-        
+                    model = F('object_field__model'),
+                    object_relationship_model = F('object_relationship__model'),
+                    object_relationship_rep = F('object_relationship__representation')
+                    ).order_by('sort')
+        print(data)
         #get parameter if you want to filter by object relationship
         parentRelationship = self.request.query_params.get('parentRelationship')
         pkParentRelationship = self.request.query_params.get('pkParentRelationship')
@@ -60,12 +63,19 @@ class DataObjectCustomViewSet( viewsets.ModelViewSet ):
                 #get data only visible is true
                 if( itemField.get('visible') == '1' ):
                     nameFieldBD = itemField.get('name')
-                    
+
                     #validate relation for List
                     if( itemField.get('type') == 7 and itemField.get('object_list_id') != None ):
                         nameField += "valuelist_"+nameFieldBD+".description "+nameFieldBD
                         join += " LEFT JOIN objects_valuelist valuelist_"+nameFieldBD+" "
                         join += " ON valuelist_"+nameFieldBD+".code = "+modelAlias+"."+nameFieldBD+" AND valuelist_"+nameFieldBD+".list_id = " + str(itemField.get('object_list_id'))
+                    
+                    #validate relation for object
+                    elif( itemField.get('object_relationship_id') != None and itemField.get('object_relationship_rep') != None ):
+                        nameField += itemField.get('object_relationship_model')+"."+itemField.get('object_relationship_rep')+" AS "+nameFieldBD+","
+                        nameField += modelAlias+"."+nameFieldBD+" AS "+"code_"+nameFieldBD
+                        join += " LEFT JOIN "+itemField.get('object_relationship_model')
+                        join += " ON "+itemField.get('object_relationship_model')+".id = "+modelAlias+"."+nameFieldBD
                     else: 
                         nameField += modelAlias+"."+nameFieldBD
 
@@ -74,7 +84,7 @@ class DataObjectCustomViewSet( viewsets.ModelViewSet ):
                     if( parentRelationship != None and pkParentRelationship != None ):
                         #Validate if there is an object relationship to filter the information
                         if ( itemField.get('object_relationship_id') == int(parentRelationship) ):
-                            conditional += nameFieldBD+" = "+pkParentRelationship
+                            conditional += modelAlias+"."+nameFieldBD+" = "+pkParentRelationship
                             foundRelationship = True
             
             if( parentRelationship != None and pkParentRelationship != None ):
@@ -92,12 +102,12 @@ class DataObjectCustomViewSet( viewsets.ModelViewSet ):
 
             modelRawObject = ObjectModelRaw()
 
-            #quitar caracter ","
+            #remove character ","
             if( nameField[-1] == "," ):
                 nameField = nameField[:-1]
 
             #get count data of model
-            responseCountDataObject = modelRawObject.getCountDataObject( modelDefault, conditional )
+            responseCountDataObject = modelRawObject.getCountDataObject( modelAlias, modelDefault, conditional )
             #get data of model
             responseDataObject = modelRawObject.getDataObject( modelDefault, modelAlias, nameField, offset, limit, pkField, None, None, join, conditional  )
             
@@ -128,7 +138,7 @@ class DataObjectCustomViewSet( viewsets.ModelViewSet ):
         if(idObje != None):
             
             dataObject = Field.objects.filter( 
-            object_field = idObje
+            object_field = idObje, state = True
                 ).values(
                 'name','type','sort', 'type_relation', 'capture', 'required', 'number_charac'
                 ).annotate( 
@@ -145,7 +155,7 @@ class DataObjectCustomViewSet( viewsets.ModelViewSet ):
                     responsePostDataObject = modelRawObject.postDataObject( validateFieldData.getModel(), 
                                                                                 validateFieldData.getStringInsert(),
                                                                                 validateFieldData.getStringValues() )
-
+                    
                     if(responsePostDataObject.status == 'OK'):
                         return Response( {'cid' : str(uuid.uuid4()),
                                             'status' : 'sucess',

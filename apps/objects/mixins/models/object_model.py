@@ -50,7 +50,7 @@ class ObjectModelRaw(object):
                 query = "SELECT "+modelAlias+"."+pkName+" AS pk ,"+fields+" , "+modelAlias+".created_date, "+modelAlias+".modified_date  "
                 
                 if representation:
-                    query += ","+representation+" AS representation_core " 
+                    query += ","+modelAlias+"."+representation+" AS representation_core " 
 
                 query += " FROM "+model+" "+modelAlias+" "
 
@@ -68,7 +68,7 @@ class ObjectModelRaw(object):
 
                 if(offset and limit):
                     query += " LIMIT "+offset+","+limit+" "
-                
+                #print(query)
                 cursor.execute( query )
                 results = self.dictfetchall(cursor)
                 responseReturn = ResponseDataQuery('OK','',results)
@@ -82,14 +82,14 @@ class ObjectModelRaw(object):
     """
     get count item in the model DB
     """
-    def getCountDataObject(self, model, conditional = None ):
+    def getCountDataObject(self, modelAlias, model, conditional = None ):
         with connection.cursor() as cursor:
             try:
-                query = "SELECT COUNT(1) count FROM "+model+" "
+                query = "SELECT COUNT(1) count FROM "+model+" "+modelAlias
 
                 if( conditional ):
                     query += " WHERE "+ conditional
-
+                    
                 cursor.execute( query )
                 results = self.dictfetchall(cursor)
                 responseReturn = ResponseDataQuery('OK','',results)

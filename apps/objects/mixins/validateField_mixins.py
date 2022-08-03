@@ -134,7 +134,7 @@ class validateField:
 
         #validate type num
         if(value == "" or value == None):
-            self.stringValues += "NULL"
+            self.stringValues += "NULL,"
             self.stringUpdate += fieldProperty.get('name')+" = NULL,"
             return
 
@@ -147,8 +147,8 @@ class validateField:
 
 
     def refactorQueryInsert(self):
-        self.stringInsert += "created_date, modified_date, deleted_date"
-        self.stringValues += "NOW(), NOW(), NOW()"
+        self.stringInsert += "created_date, modified_date, deleted_date, state"
+        self.stringValues += "NOW(), NOW(), NOW(), 1"
     
     def refactorQueryupdate(self):
         self.stringUpdate += "modified_date = NOW()"

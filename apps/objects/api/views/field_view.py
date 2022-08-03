@@ -49,8 +49,8 @@ class FieldViewSet( viewsets.ModelViewSet ):
         
         #define serializer work
         self.get_serializer_class()
-
-        if method == 'PATCH' and method == 'PUT':
+        
+        if method == 'PATCH' or method == 'PUT':
             return self.get_serializer().Meta.model.objects.get( 
                 id = pk
             )
@@ -189,12 +189,14 @@ class FieldViewSet( viewsets.ModelViewSet ):
                     ( Q(detail='1') |  Q(type_relation='1')  ), object_field = idObje
                 ).values(
                     'name','description', 'type','sort','visible','detail', 'type_relation' , 
-                    'object_group','required', 'columns', 'number_charac', 'object_list_id'
+                    'object_group','required', 'columns', 'number_charac', 'object_list_id','object_relationship_id'
                     ).annotate( 
                         model = F('object_field__model'),
                         representation = F('object_field__representation'),
-                        group_name = F('object_group__name')
-                        ).order_by('object_group__sort','sort')
+                        group_name = F('object_group__name'),
+                        object_relationship_model = F('object_relationship__model'),
+                        object_relationship_rep = F('object_relationship__representation')
+                    ).order_by('object_group__sort','sort')
             
             # process data for get data in the object DB model
             if list(data)[0]:
@@ -203,9 +205,7 @@ class FieldViewSet( viewsets.ModelViewSet ):
                 representation = list(data)[0].get('representation')
                 nameField = ""
                 join = ""
-                countData = len(list(data))
-                interator = 0
-
+                
                 #get field type relation = pk
                 if (list(data)[0].get('type_relation') == 1 ):
                     #validate ERROR when is null
@@ -221,14 +221,24 @@ class FieldViewSet( viewsets.ModelViewSet ):
                         nameField += ","+modelAlias+"."+nameFieldBD+" code_"+nameFieldBD
                         join += " LEFT JOIN objects_valuelist valuelist_"+nameFieldBD+" "
                         join += " ON valuelist_"+nameFieldBD+".code = "+modelAlias+"."+nameFieldBD+" AND valuelist_"+nameFieldBD+".list_id = "+ str(itemField.get('object_list_id'))
+
+                    #validate relation for object
+                    elif( itemField.get('object_relationship_id') != None and itemField.get('object_relationship_rep') != None ):
+                        nameField += itemField.get('object_relationship_model')+"."+itemField.get('object_relationship_rep')+" AS "+nameFieldBD+", "
+                        nameField += modelAlias+"."+nameFieldBD+" AS "+"code_"+nameFieldBD
+                        join += " LEFT JOIN "+itemField.get('object_relationship_model')
+                        join += " ON "+itemField.get('object_relationship_model')+".id = "+modelAlias+"."+nameFieldBD
+
                     else: 
                         nameField += modelAlias+"."+nameFieldBD
 
-                    interator += 1
-                    if(interator != countData):
-                        nameField += ","
+                    nameField += ","
 
                 modelRawObject = ObjectModelRaw()
+
+                #remove character ","
+                if( nameField[-1] == "," ):
+                    nameField = nameField[:-1]
                 
                 #get data of model
                 responseDataObject = modelRawObject.getDataObject( modelDefault, modelAlias, nameField, None, None, pkName, pk, representation, join )
@@ -367,7 +377,7 @@ class FieldViewSet( viewsets.ModelViewSet ):
         
         data = request.data
         idObje = data["object_field"]
-
+        
         #Get data object
         dataObject = Field.objects.filter( 
                 object_field = idObje , id = pk
@@ -376,7 +386,7 @@ class FieldViewSet( viewsets.ModelViewSet ):
             ).annotate( 
                     model = F('object_field__model'),
             )
-
+        
         if list(dataObject):
             #create field in table BD
             name = data["name"]
@@ -390,7 +400,7 @@ class FieldViewSet( viewsets.ModelViewSet ):
             #validate that the name is not altered
             name = dataAccesObject.get('name') if name != dataAccesObject.get('name') else name
             request.data["name"] = name
-
+      
             serializer = self.serializer_class( self.get_queryset(pk, 'PATCH'), data = request.data )
 
             if serializer.is_valid():
