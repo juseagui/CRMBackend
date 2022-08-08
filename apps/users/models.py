@@ -1,4 +1,5 @@
 from django.db import models
+from apps.base.models import BaseModel
 from django.contrib.auth.models import BaseUserManager, AbstractBaseUser, PermissionsMixin
 
 
@@ -23,7 +24,7 @@ class UserManager(BaseUserManager):
     def create_superuser(self, username, email, name,last_name, password=None, **extra_fields):
         return self._create_user(username, email, name,last_name, password, True, True, **extra_fields)
 
-class User(AbstractBaseUser, PermissionsMixin):
+class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     username = models.CharField(max_length = 255, unique = True)
     email = models.EmailField('Correo Electrónico',max_length = 255, unique = True,)
     name = models.CharField('Nombres', max_length = 255, blank = True, null = True)
