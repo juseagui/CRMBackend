@@ -13,7 +13,7 @@ from apps.objects.models import Object,Field
 #package personality querys bd and mixins
 from apps.objects.mixins.models.object_model import ObjectModelRaw
 from apps.objects.mixins.models.field_model import FieldModelRaw
-from apps.objects.mixins.validateField_mixins import validateField
+from apps.processes.mixins.validateProcess_mixins import validateProcess
 
 #package bd django
 from django.db.models import F
@@ -94,6 +94,10 @@ class FieldViewSet( viewsets.ModelViewSet ):
         action = self.request.query_params.get('action')
         pkModel = self.request.query_params.get('pk')
 
+        # Validate if the product has a parameterized process
+        validateProcessData = validateProcess( idObject, request.user.id, None,  pkModel )
+        dataProcess = validateProcessData.validateExistProcessObject()
+
         if(capture and action == 'edit' and pkModel):
             data = list(dataReturn)
             #begin process action edit
@@ -159,17 +163,30 @@ class FieldViewSet( viewsets.ModelViewSet ):
                                 'error': 'The Query is None',
                                 'detailError' : [] }, status = status.HTTP_400_BAD_REQUEST )
 
+            historical = []
+            #validate actual activity
+            if dataProcess:
+                historical = validateProcessData.validateExistHistoricalProcess( True )
 
             #final process action edit
             respAditional = {
-            'created_date' : responseDataObject.data[0].get('created_date'),
-            'modified_date' : responseDataObject.data[0].get('modified_date'),
-            'data' : jsonData
+                'created_date' : responseDataObject.data[0].get('created_date'),
+                'modified_date' : responseDataObject.data[0].get('modified_date'),
+                'process' : {
+                    'activities' : dataProcess,
+                    'historical' : historical
+                } ,
+                'data' : jsonData
             }
         
         else:
             respAditional = {
-            'data' : dataReturn}
+                'process' : {
+                    'activities' : dataProcess,
+                    'historical' : []
+                } ,
+                'data' : dataReturn
+            }
 
         return Response( {'cid' : str(uuid.uuid4()),
                          'status' : 'success',
@@ -264,9 +281,30 @@ class FieldViewSet( viewsets.ModelViewSet ):
 
                     #validate Response
                     if(responseDataObject.status == 'OK'):
-                        return Response( { 'created_date' : responseDataObject.data[0].get('created_date'),
-                                        'modified_date' : responseDataObject.data[0].get('modified_date'),
-                                        'data' : jsonData },  status = status.HTTP_200_OK )
+
+                        # Validate if the product has a parameterized process
+                        validateProcessData = validateProcess( idObje, request.user.id, None, pk )
+                        dataProcess = validateProcessData.validateExistProcessObject()
+                        historical = []
+
+                         #validate actual activity
+                        if dataProcess:
+                            historical = validateProcessData.validateExistHistoricalProcess()
+                        
+                        respAditional = {
+                            'created_date' : responseDataObject.data[0].get('created_date'),
+                            'modified_date' : responseDataObject.data[0].get('modified_date'),
+                            'process' : {
+                                'activities' : dataProcess,
+                                'historical' : historical
+                            } ,
+                            'data' : jsonData
+                        }
+
+                        return Response( {'cid' : str(uuid.uuid4()),
+                                        'status' : 'success',
+                                        'timestamp' : datetime.now().strftime("%m-%d-%Y %H:%M:%S"),
+                                        'data' : respAditional }, status = status.HTTP_200_OK )
                     else:
                         return Response({'cid' : str(uuid.uuid4()),
                                     'status' : 'error validate fields',

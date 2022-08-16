@@ -108,7 +108,7 @@ class ObjectModelRaw(object):
             try:
                 query = "INSERT INTO "+model+" ("+fields+")"
                 query += "VALUES ("+values+")"
-                print(query)
+                
                 cursor.execute( query )
                 results = []
                 responseReturn = ResponseDataQuery('OK','',results)
@@ -128,7 +128,7 @@ class ObjectModelRaw(object):
             try:
                 query = "UPDATE "+model+" SET "
                 query += fields+" WHERE  "+pkName+" = "+pk
-                print(query)
+                
                 cursor.execute( query )
                 results = []
                 responseReturn = ResponseDataQuery('OK','',results)

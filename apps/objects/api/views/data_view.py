@@ -39,7 +39,7 @@ class DataObjectCustomViewSet( viewsets.ModelViewSet ):
                     object_relationship_model = F('object_relationship__model'),
                     object_relationship_rep = F('object_relationship__representation')
                     ).order_by('sort')
-        print(data)
+        
         #get parameter if you want to filter by object relationship
         parentRelationship = self.request.query_params.get('parentRelationship')
         pkParentRelationship = self.request.query_params.get('pkParentRelationship')

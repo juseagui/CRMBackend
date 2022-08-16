@@ -279,7 +279,7 @@ class RelationshipViewSet( viewsets.ModelViewSet ):
                     success =+ success
                 else:
                     error += 1
-                    print(serializer.errors)
+                    #print(serializer.errors)
                     msgError.append(serializer.errors)
                     
 

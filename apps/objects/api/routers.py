@@ -8,6 +8,7 @@ from apps.objects.api.views.permissions_view import objectsPermissionsCustomView
 
 #import app processes
 from apps.processes.api.views.processes_view import ProcessViewSet
+from apps.processes.api.views.historical_view import HistoricalViewSet
 
 router = DefaultRouter()
 
@@ -26,7 +27,12 @@ router.register(r'field', FieldViewSet , basename = 'objectsCustom' )
 # Get data the objects of databases
 router.register(r'data', DataObjectCustomViewSet , basename = 'objectsCustom' )
 
-# Get data processes
+
+# Get and created flow data processes
 router.register(r'procesess', ProcessViewSet , basename = 'Procesess' )
+
+# Get and created flow data processes
+router.register(r'historical', HistoricalViewSet , basename = 'HistoricalProcesess' )
+
 
 urlpatterns = router.urls 

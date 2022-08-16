@@ -1,9 +1,7 @@
 #package rest_framework
-from rest_framework import generics
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db import connection
 
 #import serializers
 from apps.processes.api.serializers.process_serializers import ProcessCustomSerializer, ProcessSerializer
@@ -15,7 +13,6 @@ from django.db.models import F
 from django.db.models import Q
 from datetime import datetime
 import uuid
-import re
 
 # -------------------------------------------------------------------------------------------------
 # Controller to manage the process flow 
@@ -23,7 +20,7 @@ import re
 
 class ProcessViewSet( viewsets.ModelViewSet ):
     serializer_class = ProcessSerializer
-    http_method_names = ['get','post','patch','put']
+    http_method_names = ['get','post','patch']
     permission_classes = (IsAuthenticated,)
 
     def get_serializer_class(self, pk= None):
