@@ -131,3 +131,6 @@ apps/processes/migrations/0001_initial.py
 apps/processes/migrations/0002_initial.py
 apps/users/migrations/0001_initial.py
 apps/objects/migrations/0001_initial.py
+apps/objects/migrations/0001_initial.py
+apps/processes/migrations/0001_initial.py
+apps/users/migrations/0001_initial.py
