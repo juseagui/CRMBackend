@@ -125,6 +125,15 @@ class FieldViewSet( viewsets.ModelViewSet ):
                             nameField += ","+modelAlias+"."+nameFieldBD+" code_"+nameFieldBD
                             join += " LEFT JOIN objects_valuelist valuelist_"+nameFieldBD+" "
                             join += " ON valuelist_"+nameFieldBD+".code = "+modelAlias+"."+nameFieldBD+" AND valuelist_"+nameFieldBD+".list_id = " + str(itemField.get('object_list').get('id'))
+                        
+                        #validate relation for object
+                        elif( itemField.get('object_relationship') != None ):
+                            if( itemField.get('object_relationship').get('id') != None and itemField.get('object_relationship').get('representation') != None  ):
+                                nameField += itemField.get('object_relationship').get('model')+"."+itemField.get('object_relationship').get('representation')+" AS "+nameFieldBD+", "
+                                nameField += modelAlias+"."+nameFieldBD+" AS "+"code_"+nameFieldBD
+                                join += " LEFT JOIN "+itemField.get('object_relationship').get('model')
+                                join += " ON "+itemField.get('object_relationship').get('model')+".id = "+modelAlias+"."+nameFieldBD
+
                         else: 
                             nameField += modelAlias+"."+nameFieldBD
 
@@ -144,7 +153,7 @@ class FieldViewSet( viewsets.ModelViewSet ):
                         if(itemFieldValue.get('capture') == '1'):
                             itemFielTemp = itemFieldValue
                             #create list temp
-                            if(itemFieldValue.get('type') == 7):
+                            if( (itemFieldValue.get('type') == 7 ) or (itemFieldValue.get('type') == 5 and itemFieldValue.get('type_relation') == 2 ) ):
                                 valueObject = { 'description' : responseDataObject.data[0].get(itemFieldValue.get('name')),
                                                 'code'        :  str(responseDataObject.data[0].get("code_"+itemFieldValue.get('name')))   }
                             else:

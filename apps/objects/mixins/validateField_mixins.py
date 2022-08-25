@@ -95,7 +95,7 @@ class validateField:
         #validate type num
         if( fieldProperty.get('type') == 5 ):
             try:
-                int(value)
+                int( value if value else  0)
             except:
                 msg = "Field only Number"
                 self.fieldError.append({ fieldProperty.get('name') : {

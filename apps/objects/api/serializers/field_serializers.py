@@ -24,6 +24,7 @@ class FieldCaptureSerializer (serializers.ModelSerializer):
     object_field = ObjectCustomSerializer()
     object_group = GroupCustomSerializer()
     object_list = ListSerializer()
+    object_relationship = ObjectCustomSerializer()
     class Meta:
         model = Field
         exclude  = ('created_date','modified_date','deleted_date' )  

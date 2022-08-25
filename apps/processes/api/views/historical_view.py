@@ -26,6 +26,7 @@ class HistoricalViewSet( viewsets.ModelViewSet ):
 
     def create( self, request ):
 
+        request.data["user_historical"] = request.user.id
         serializer = self.get_serializer( data=request.data )
         
         if ( serializer.is_valid() ):
