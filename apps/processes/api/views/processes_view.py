@@ -36,11 +36,13 @@ class ProcessViewSet( viewsets.ModelViewSet ):
             return self.get_serializer().Meta.model.objects.filter( state = True )
 
     def list( self, request):
-
+        
         #define serializer work
-        self.get_serializer_class()
+        self.get_serializer_class( True )
 
         data_process = self.get_serializer( self.get_queryset(), many = True )
+        
+        #get data object
 
         return Response( {'cid' : str(uuid.uuid4()),
                          'status' : 'success',
