@@ -10,6 +10,7 @@ from django.db import connection
 #package personality querys bd and mixins
 from apps.objects.mixins.models.object_model import ObjectModelRaw
 from apps.objects.mixins.validateField_mixins import validateField
+from apps.objects.mixins.generatedQuery_mixins import generatedQuery
 
 #package bd django
 from django.db.models import F
@@ -25,10 +26,11 @@ from apps.objects.models import  Field
 # -------------------------------------------------------------------------------------------------
 
 class DataObjectCustomViewSet( viewsets.ModelViewSet ):
-    http_method_names = ['get','post','patch']
+    http_method_names = ['get','post','patch','put']
     permission_classes = (IsAuthenticated,)
 
     def retrieve(self, request, pk=None):
+        
         # Get data field for list datalist
         data = Field.objects.filter( 
             object_field = pk
@@ -60,10 +62,10 @@ class DataObjectCustomViewSet( viewsets.ModelViewSet ):
             
             for itemField in list(data):
                 
+                nameFieldBD = itemField.get('name')
+
                 #get data only visible is true
                 if( itemField.get('visible') == '1' ):
-                    nameFieldBD = itemField.get('name')
-
                     #validate relation for List
                     if( itemField.get('type') == 7 and itemField.get('object_list_id') != None ):
                         nameField += "valuelist_"+nameFieldBD+".description "+nameFieldBD
@@ -84,9 +86,9 @@ class DataObjectCustomViewSet( viewsets.ModelViewSet ):
                     if( parentRelationship != None and pkParentRelationship != None ):
                         #Validate if there is an object relationship to filter the information
                         if ( itemField.get('object_relationship_id') == int(parentRelationship) ):
-                            conditional += modelAlias+"."+nameFieldBD+" = "+pkParentRelationship
+                            conditional += modelAlias+"."+nameFieldBD+" = "+pkParentRelationship+" "
                             foundRelationship = True
-            
+              
             if( parentRelationship != None and pkParentRelationship != None ):
                 if( not foundRelationship ):
                     return Response({'cid' : str(uuid.uuid4()),
@@ -107,9 +109,9 @@ class DataObjectCustomViewSet( viewsets.ModelViewSet ):
                 nameField = nameField[:-1]
 
             #get count data of model
-            responseCountDataObject = modelRawObject.getCountDataObject( modelAlias, modelDefault, conditional )
+            responseCountDataObject = modelRawObject.getCountDataObject( modelAlias, modelDefault,  conditional )
             #get data of model
-            responseDataObject = modelRawObject.getDataObject( modelDefault, modelAlias, nameField, offset, limit, pkField, None, None, join, conditional  )
+            responseDataObject = modelRawObject.getDataObject( modelDefault, modelAlias, nameField, offset, limit, pkField, None, None, join, conditional )
             
             #validate Response
             if(responseDataObject.status == 'OK'):
@@ -155,12 +157,11 @@ class DataObjectCustomViewSet( viewsets.ModelViewSet ):
                     responsePostDataObject = modelRawObject.postDataObject( validateFieldData.getModel(), 
                                                                                 validateFieldData.getStringInsert(),
                                                                                 validateFieldData.getStringValues() )
-                    
                     if(responsePostDataObject.status == 'OK'):
                         return Response( {'cid' : str(uuid.uuid4()),
                                             'status' : 'sucess',
                                             'timestamp' : datetime.now().strftime("%m-%d-%Y %H:%M:%S"),
-                                            'data' : [] }, status = status.HTTP_201_CREATED )
+                                            'data' : {  'id' : responsePostDataObject.data } }, status = status.HTTP_201_CREATED )
                     else:
                         return Response( {'cid' : str(uuid.uuid4()),
                                             'status' : 'error database',
@@ -192,7 +193,7 @@ class DataObjectCustomViewSet( viewsets.ModelViewSet ):
                             'error': 'param object is required' ,
                             'detailError' : [] }, status = status.HTTP_400_BAD_REQUEST )
 
-    def partial_update(self,  request, pk = None,):
+    def partial_update(self,  request, pk = None):
         
         idObje = self.request.query_params.get('object')
         data = request.data
@@ -253,6 +254,98 @@ class DataObjectCustomViewSet( viewsets.ModelViewSet ):
                             'error': 'param object is required' ,
                             'detailError' : [] }, status = status.HTTP_400_BAD_REQUEST )
 
+    def update(self, request, pk = None):
+
+        # Get data field for list datalist
+        data = Field.objects.filter( 
+            object_field = pk
+             ).values(
+                'name','type','sort','visible', 'type_relation', 'object_list_id','object_relationship_id'
+                ).annotate( 
+                    model = F('object_field__model'),
+                    object_relationship_model = F('object_relationship__model'),
+                    object_relationship_rep = F('object_relationship__representation')
+                    ).order_by('sort')
+
+        # process data for get data in the object DB model
+        if list(data):
+            modelDefault = list(data)[0].get('model')
+            modelAlias = modelDefault+"_"+pk
+            nameField = ""
+            join = ""
+            
+            #get field type relation = pk
+            if (list(data)[0].get('type_relation') == 1 ):
+                pkField =  list(data)[0].get('name')
+
+            conditional = ""
+            whereFilter = ""
+            filterData = True if list(request.data) else False
+            
+            for itemField in list(data):
+                
+                nameFieldBD = itemField.get('name')
+
+                #get data only visible is true
+                if( itemField.get('visible') == '1' ):
+                    #validate relation for List
+                    if( itemField.get('type') == 7 and itemField.get('object_list_id') != None ):
+                        nameField += "valuelist_"+nameFieldBD+".description "+nameFieldBD
+                        join += " LEFT JOIN objects_valuelist valuelist_"+nameFieldBD+" "
+                        join += " ON valuelist_"+nameFieldBD+".code = "+modelAlias+"."+nameFieldBD+" AND valuelist_"+nameFieldBD+".list_id = " + str(itemField.get('object_list_id'))
+                    
+                    #validate relation for object
+                    elif( itemField.get('object_relationship_id') != None and itemField.get('object_relationship_rep') != None ):
+                        nameField += itemField.get('object_relationship_model')+"."+itemField.get('object_relationship_rep')+" AS "+nameFieldBD+","
+                        nameField += modelAlias+"."+nameFieldBD+" AS "+"code_"+nameFieldBD
+                        join += " LEFT JOIN "+itemField.get('object_relationship_model')
+                        join += " ON "+itemField.get('object_relationship_model')+".id = "+modelAlias+"."+nameFieldBD
+                    else: 
+                        nameField += modelAlias+"."+nameFieldBD
+
+                    nameField += ","
+
+                #Validate if filter data
+                if(filterData):
+                    generatedQueryFilter = generatedQuery()
+                    conditionFilter = generatedQueryFilter.generateWhereFilter( request.data , nameFieldBD, modelAlias  )
+                    whereFilter +=  " "+conditionFilter+" AND" if conditionFilter != "" else conditionFilter
+                            
+            #get params for pagination
+            offset = self.request.query_params.get('offset') if self.request.query_params.get('offset') != None else 0
+            limit = self.request.query_params.get('limit') if self.request.query_params.get('limit') != None else 15
+
+            modelRawObject = ObjectModelRaw()
+
+            #remove character ","
+            if( nameField[-1] == "," ):
+                nameField = nameField[:-1]
+
+            #get count data of model
+            responseCountDataObject = modelRawObject.getCountDataObject( modelAlias, modelDefault,  conditional+whereFilter+" 1=1" )
+            #get data of model
+            responseDataObject = modelRawObject.getDataObject( modelDefault, modelAlias, nameField, offset, limit, pkField, None, None, join, conditional+whereFilter+" 1=1"  )
+            
+            #validate Response
+            if(responseDataObject.status == 'OK'):
+                
+                respAditional = {
+                'count' : responseCountDataObject.data[0]['count'],
+                'data' : responseDataObject.data
+                }
+
+                return Response( {'cid' : str(uuid.uuid4()),
+                         'status' : 'success',
+                         'timestamp' : datetime.now().strftime("%m-%d-%Y %H:%M:%S"),
+                         'data' : respAditional }, status = status.HTTP_200_OK )
+
+        return Response({'cid' : str(uuid.uuid4()),
+                        'status' : 'error validate fields',
+                        'timestamp' : datetime.now().strftime("%m-%d-%Y %H:%M:%S"),
+                        'data' : [],
+                        'error': 'Object '+pk+' does not exist, not active or has no fields',
+                        'detailError' : [] }, status = status.HTTP_400_BAD_REQUEST )
+        
 
 # -------------------------------------------------------------------------------------------------
 # Controller to manage data related objects

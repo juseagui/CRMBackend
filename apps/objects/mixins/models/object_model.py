@@ -68,7 +68,7 @@ class ObjectModelRaw(object):
 
                 if(offset and limit):
                     query += " LIMIT "+offset+","+limit+" "
-                #print(query)
+                print(query)
                 cursor.execute( query )
                 results = self.dictfetchall(cursor)
                 responseReturn = ResponseDataQuery('OK','',results)
@@ -107,10 +107,10 @@ class ObjectModelRaw(object):
         with connection.cursor() as cursor:
             try:
                 query = "INSERT INTO "+model+" ("+fields+")"
-                query += "VALUES ("+values+")"
-                print(query)
+                query += "VALUES ("+values+");"
+                query += "SELECT LAST_INSERT_ID();"
                 cursor.execute( query )
-                results = []
+                results = cursor.lastrowid
                 responseReturn = ResponseDataQuery('OK','',results)
             except Exception as err:
                   msg = 'Failure in executing query {0}. Error: {1}'.format(query, err)
