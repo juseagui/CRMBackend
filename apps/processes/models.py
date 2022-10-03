@@ -21,6 +21,7 @@ class Activity(BaseModel):
     description = models.CharField('Description', max_length=50,blank = False,null = False,unique = False)
     process_activity = models.ForeignKey(Process, on_delete=models.CASCADE, related_name= 'processActivity', verbose_name = 'ProcessActivity')
     code = models.CharField('Code of Activity', max_length=50, unique = False,blank = False,null = False)
+    process_state = models.CharField('State of Activity', max_length=11, unique = False,blank = False,null = False)
     sort = models.IntegerField('Order of Activity',  blank = False,null = False)
 
     class Meta:

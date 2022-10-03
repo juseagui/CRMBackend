@@ -68,7 +68,7 @@ class ObjectModelRaw(object):
 
                 if(offset and limit):
                     query += " LIMIT "+offset+","+limit+" "
-                print(query)
+                
                 cursor.execute( query )
                 results = self.dictfetchall(cursor)
                 responseReturn = ResponseDataQuery('OK','',results)

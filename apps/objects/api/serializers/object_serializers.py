@@ -8,7 +8,6 @@ from apps.objects.models import Field, Object, Group, List, ValueList, CategoryO
 
 class FilteredPermissionSerializer(serializers.ListSerializer):
     def to_representation(self, data):
-        print( self.context['request'].user.rol_user.id )
         data = data.filter(  state=True, rol_permission__id = self.context['request'].user.rol_user.id  ).order_by('id')
         #data = data.filter(  state=True, object_rol__isnull = True ).order_by('sort')
         return super(FilteredPermissionSerializer, self).to_representation(data)

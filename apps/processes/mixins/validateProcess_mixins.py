@@ -20,7 +20,7 @@ class validateProcess:
         self.dataActivities = Activity.objects.filter(
             process_activity__object_process = self.object
             ).values(
-            'id','description','process_activity','code','sort'
+            'id','description','process_activity','code','process_state','sort'
             ).order_by('sort')
 
         #get process id

@@ -99,6 +99,7 @@ class ProcessViewSet( viewsets.ModelViewSet ):
                                 'code': itemActivity.get('code'), 
                                 'sort' : itemActivity.get('sort'),
                                 'description' : itemActivity.get('description'),
+                                'process_state' : itemActivity.get('process_state'),
                                 'process_activity' : processData,
                                 },
                         )
@@ -156,6 +157,7 @@ class ProcessViewSet( viewsets.ModelViewSet ):
                         code = itemActivity.get('code'), 
                         process_activity = processData,
                         description = itemActivity.get('description'),
+                        process_state = itemActivity.get('process_state'),
                         sort = itemActivity.get('sort'),
                         )
 
