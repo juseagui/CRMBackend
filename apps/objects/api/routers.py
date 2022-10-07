@@ -10,6 +10,9 @@ from apps.objects.api.views.permissions_view import objectsPermissionsCustomView
 from apps.processes.api.views.processes_view import ProcessViewSet
 from apps.processes.api.views.historical_view import HistoricalViewSet
 
+#import app reports
+from apps.reports.api.views.reports_view import ReportsProcessViewSet, ReportsProgramViewSet
+
 router = DefaultRouter()
 
 # Get Objects
@@ -33,6 +36,10 @@ router.register(r'procesess', ProcessViewSet , basename = 'Procesess' )
 
 # Get and created flow data processes
 router.register(r'historical', HistoricalViewSet , basename = 'HistoricalProcesess' )
+
+# Get reports data
+router.register(r'reports/process', ReportsProcessViewSet , basename = 'ReportsProcess' )
+router.register(r'reports/program', ReportsProgramViewSet , basename = 'ReportsProgram' )
 
 
 urlpatterns = router.urls 

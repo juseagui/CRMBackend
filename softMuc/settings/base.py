@@ -33,6 +33,7 @@ LOCAL_APPS = [
     'apps.users',
     'apps.objects',
     'apps.processes',
+    'apps.reports',
 ]
 
 
