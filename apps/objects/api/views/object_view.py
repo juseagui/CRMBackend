@@ -1,258 +1,298 @@
+#package rest_framework
 from rest_framework import generics
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.db import connection
 
-from apps.objects.api.serializers.object_serializers import ObjectSerializer,FieldSerializer, FieldCaptureSerializer
-from apps.objects.models import Object, Field
-from apps.objects.utils.models.object_model import ObjectModelRaw
+from apps.objects.api.serializers.object_serializers import ObjectSerializer, RelationshipSerializer
+from apps.objects.api.serializers.field_serializers import FieldSerializer
+from apps.objects.api.serializers.group_serializers import GroupCustomSerializer
+from apps.objects.models import  Field, Relationship
+
+#package personality querys bd and mixins
+from apps.objects.mixins.models.object_model import ObjectModelRaw
+
+#package bd django
 from django.db.models import F
 from django.db.models import Q
-import json
+from datetime import datetime
+import uuid
+import re
 
 
 # -------------------------------------------------------------------------------------------------
-# Manejo de viewset
+# Controller to manage the object master
 # -------------------------------------------------------------------------------------------------
 
 class ObjectViewSet( viewsets.ModelViewSet ):
     serializer_class = ObjectSerializer
-
+    http_method_names = ['get','post','patch','put']
     permission_classes = (IsAuthenticated,)
     
     def get_queryset( self, pk = None ):
-        return self.get_serializer().Meta.model.objects.filter( state = True ).order_by('order')
+        return self.get_serializer().Meta.model.objects.filter( state = True ).order_by('sort')
 
     def list( self, request):
         object_serializer = self.get_serializer( self.get_queryset(), many = True )
-        return Response( object_serializer.data, status = status.HTTP_200_OK  )
+
+        return Response( {'cid' : str(uuid.uuid4()),
+                         'status' : 'success',
+                         'timestamp' : datetime.now().strftime("%m-%d-%Y %H:%M:%S"),
+                         'data' : object_serializer.data }, status = status.HTTP_200_OK )
 
     def create( self, request):
-        serializer = self.serializer_class( data = request.data, context={'request': '/objects'} )
-        if serializer.is_valid():
-            serializer.save()
-            return Response( { 'message' : 'Se creo exitosamente el objeto', 'data' : serializer.data }  , status = status.HTTP_201_CREATED )
-        return Response( serializer.errors , status = status.HTTP_400_BAD_REQUEST )
-
-    def delete( self,request,pk=None ):
-        product = self.get_queryset().filter(id = pk).first()
-        if product:
-            product.state = False
-            product.save()
-            return Response({'message':'Objeto Eliminado'},  status = status.HTTP_200_OK  )
-        return Response({'error':'No existe un producto con estos datos'},  status = status.HTTP_400_BAD_REQUEST )
-
-    def update( self, request,pk=None ):
-        if self.get_queryset(pk):
-            object_serializer = self.serializer_class( self.get_queryset(pk), data = request.data )
-
-            if object_serializer.is_valid():
-                object_serializer.save()
-                return Response( object_serializer.data, status = status.HTTP_200_OK )
-            return Response( object_serializer.errors , status = status.HTTP_400_BAD_REQUEST )
-    
-
-# -----------------------------------------------------------------------------------------------------
-# Custom Field Get list visible
-# -- router : getFieldObject
-# -- params: visible 
-#------------------------------------------------------------------------------------------------------
-
-class FieldCoreCustomViewSet( viewsets.ModelViewSet ):
-    serializer_class = FieldSerializer
-    http_method_names = ['get']
-    permission_classes = (IsAuthenticated,)
-
-    def get_serializer_class(self):
-
-        if(self.request.query_params.get('visible')):
-            self.serializer_class = FieldSerializer
-        elif(self.request.query_params.get('capture')):
-            self.serializer_class = FieldCaptureSerializer
-        elif(self.request.query_params.get('detail')):
-            self.serializer_class = FieldCaptureSerializer
-        else:
-            return self.serializer_class
-
-        return self.serializer_class
-    
-    def get_queryset( self, pk = None ):
-        
-        #define serializer work
-        self.get_serializer_class()
-        
-        #filters query
-        #print(self.request.query_params.get('visible'))
-        visible = self.request.query_params.get('visible')
-        capture = self.request.query_params.get('capture')
-        detail = self.request.query_params.get('detail')
-
-        if( visible ):
-            return self.get_serializer().Meta.model.objects.filter( 
-                                                                    object_field = pk, 
-                                                                    visible = visible,
-                                                                    state = 1
-                                                                    ).order_by('order')
-        elif(capture):
-            #change serializers
-            return self.get_serializer().Meta.model.objects.exclude(
-                type_relation = 1
-            ).filter( 
-                object_field = pk, 
-                capture = capture,
-                state = 1,
-            ).order_by('object_group__order','order')
-
-        elif(detail):
-            #change serializers
-            return self.get_serializer().Meta.model.objects.exclude(
-                type_relation = 1
-            ).filter( 
-                object_field = pk, 
-                detail = detail,
-                state = 1,
-            ).order_by('object_group__order','order')
-
-    def retrieve(self, request, pk=None):
-        fieldObject = self.get_queryset( pk)
-        # Query Get Fields of object
-        object_serializer = self.get_serializer( fieldObject, many = True ).data
-        return Response( object_serializer, status = status.HTTP_200_OK )
-
-
-
-# -----------------------------------------------------------------------------------------------------
-#  Get data of object database
-# -- router : getDataObject
-#------------------------------------------------------------------------------------------------------
-
-class DataObjectCustomViewSet( viewsets.ModelViewSet ):
-    http_method_names = ['get']
-    permission_classes = (IsAuthenticated,)
-
-    def retrieve(self, request, pk=None):
-        # Get data field for list datalist
-        data = Field.objects.filter( 
-            object_field = pk, visible = '1'
-             ).values(
-                'name','type','order','visible', 'type_relation' 
-                ).annotate( 
-                    model = F('object_field__model')).order_by('order')
-
-        # process data for get data in the object DB model
-        if list(data)[0]:
-            model = list(data)[0].get('model')
-            nameField = ""
-            countData = len(list(data))
-            interator = 0
-
-            #get field type relation = pk
-            if (list(data)[0].get('type_relation') == 1 ):
-                pk =  list(data)[0].get('name')
-            
-
-            for itemField in list(data):
-                nameField += itemField.get('name')
-                interator += 1
-                if(interator != countData):
-                    nameField += ","
-            
-            #get params for pagination
-            offset = self.request.query_params.get('offset') if self.request.query_params.get('offset') != None else 0
-            limit = self.request.query_params.get('limit') if self.request.query_params.get('limit') != None else 15
-
-            modelRawObject = ObjectModelRaw()
-
-            #get count data of model
-            responseCountDataObject = modelRawObject.getCountDataObject( model )
-
-            #get data of model
-            responseDataObject = modelRawObject.getDataObject( model, nameField, offset, limit, pk, None )
- 
-            #validate Response
-            if(responseDataObject.status == 'OK'):
-                return Response( {'count' : responseCountDataObject.data[0]['count'],  'data' : responseDataObject.data} ,  status = status.HTTP_200_OK )
-           
-        return Response({'error': responseDataObject.msg },  status = status.HTTP_400_BAD_REQUEST )
-
-
-
-# -----------------------------------------------------------------------------------------------------
-#  Get detail item in Object
-# -- router : getDetailItemObject
-#------------------------------------------------------------------------------------------------------
-
-class DataDetailItemObjectViewSet( viewsets.ModelViewSet ):
-    http_method_names = ['get']
-    permission_classes = (IsAuthenticated,)
-
-    def retrieve(self, request, pk=None):
-        # Get data field for list datalist
-        #get params for detail
-        idObje = self.request.query_params.get('object') if self.request.query_params.get('object') != None else 0
-
-        #validate params object
-        if idObje != 0:
-            
-            #Get data field and object
-            data = Field.objects.filter( 
-                  ( Q(detail='1') |  Q(type_relation='1')  ), object_field = idObje
-                ).values(
-                    'name','description', 'type','order','visible','detail', 'type_relation' , 'object_group','required', 'columns'
-                    ).annotate( 
-                        model = F('object_field__model'),
-                        representation = F('object_field__representation'),
-                        group_name = F('object_group__name')
-                        ).order_by('object_group__order','order')
-            
-            # process data for get data in the object DB model
-            if list(data)[0]:
-                model = list(data)[0].get('model')
-                representation = list(data)[0].get('representation')
-                nameField = ""
-                countData = len(list(data))
-                interator = 0
-
-                #get field type relation = pk
-                if (list(data)[0].get('type_relation') == 1 ):
-                    #validate ERROR when is null
-                    pkName =  list(data)[0].get('name')
-                
-
-                for itemField in list(data):
-                    interator += 1
-                    nameField += itemField.get('name')
-                    if(interator != countData):
-                        nameField += ","
+        #validate model
+        patron = re.compile("^\w+$")
+        if( patron.match(request.data["model"]) ):
+            serializer = self.serializer_class( data = request.data, context={'request': '/objects'} )
+            if serializer.is_valid():
 
                 modelRawObject = ObjectModelRaw()
-               
-                #get data of model
-                responseDataObject = modelRawObject.getDataObject( model, nameField, None, None, pkName, pk, representation )
 
-                jsonData = []
-                arrGroup = dict()
-                for itemFieldValue in list(data):
-                    #exclude pk if not detail
-                    if(itemFieldValue.get('detail') == '1'):
-                        itemFielTemp = itemFieldValue
-                        #create list temp
-                        arrGroup['id'] = itemFielTemp['object_group']
-                        arrGroup['name'] = itemFielTemp['group_name']
-                        itemFielTemp['value'] = responseDataObject.data[0].get(itemFieldValue.get('name'))
-                        itemFielTemp['representation'] = responseDataObject.data[0].get(itemFieldValue.get('representation'))
-                        itemFielTemp['object_group'] = arrGroup
-                        #add value in json
-                        jsonData.append(itemFielTemp)
-                        arrGroup = dict()
+                #check if the table exists
+                dataTable = modelRawObject.getTableSystem( request.data["model"] )
+                transacSuccess = True
+                
+                #if it doesn't exist create it
+                if(not dataTable.data):
+                    responseCreatedTable = modelRawObject.postTableSystem( request.data["model"] ) 
+                    if( responseCreatedTable.status != 'OK' ):
+                        transacSuccess = False
 
-    
-                #validate Response
-                if(responseDataObject.status == 'OK'):
-                    return Response( { 'created_date' : responseDataObject.data[0].get('created_date'),
-                                       'modified_date' : responseDataObject.data[0].get('modified_date'),
-                                       'data' : jsonData },  status = status.HTTP_200_OK )
-           
-            return Response({'error': responseDataObject.msg },  status = status.HTTP_400_BAD_REQUEST )
+                if( transacSuccess ):
+                    serializer.save()
+
+                    if(serializer.data):
+                        if(serializer.data['id']):
+
+                            #create group
+                            firstGroup = dict()
+                            firstGroup['name'] = 'Información principal'
+                            firstGroup['object_group'] = serializer.data['id']
+                            firstGroup['sort'] = 1
+
+                            serializerGroup = GroupCustomSerializer( data = firstGroup )
+                            if serializerGroup.is_valid():
+                                serializerGroup.save()
+
+                                #create field id
+                                firstField = dict()
+                                firstField['name'] = 'id'
+                                firstField['description'] = 'id'
+                                firstField['type'] = 5
+                                firstField['type_relation'] = 1
+                                firstField['sort'] = 1
+                                firstField['object_field'] = serializer.data['id']
+                                firstField['object_group'] = serializerGroup.data['id']
+                                firstField['visible'] = '1'
+                                firstField['capture'] = '0'
+                                firstField['detail'] = '0'
+                                firstField['edit'] = '0'
+                                firstField['required'] = '1'
+                                firstField['number_charac'] = 11
+                                firstField['columns'] = 3
+
+                                serializerField = FieldSerializer( data = firstField )
+
+                                if serializerField.is_valid():
+                                    serializerField.save()
+
+                    return Response({'cid' : str(uuid.uuid4()),
+                                'status' : 'success',
+                                'timestamp' : datetime.now().strftime("%m-%d-%Y %H:%M:%S"),
+                                'data' : [],}, status = status.HTTP_201_CREATED )
+
+                else:
+                    return Response({'cid' : str(uuid.uuid4()),
+                                'status' : 'error',
+                                'timestamp' : datetime.now().strftime("%m-%d-%Y %H:%M:%S"),
+                                'data' : [],
+                                'error': responseCreatedTable.msg,
+                                'detailError' : [] }, status = status.HTTP_400_BAD_REQUEST )
+            
+            return Response({'cid' : str(uuid.uuid4()),
+                                'status' : 'error',
+                                'timestamp' : datetime.now().strftime("%m-%d-%Y %H:%M:%S"),
+                                'data' : [],
+                                'error': serializer.errors,
+                                'detailError' : [] }, status = status.HTTP_400_BAD_REQUEST )
+        else:
+            return Response({'cid' : str(uuid.uuid4()),
+                            'status' : 'error',
+                            'timestamp' : datetime.now().strftime("%m-%d-%Y %H:%M:%S"),
+                            'data' : [],
+                            'error': 'The model is invalid or incorrect - '+request.data["model"],
+                            'detailError' : [] }, status = status.HTTP_400_BAD_REQUEST )
+
+    def update( self,request,pk=None ):
+
+        object = self.get_queryset().filter(id = pk).first()
+        if object:
+            object.state = False
+            object.save()
+            return Response({'cid' : str(uuid.uuid4()),
+                            'status' : 'success',
+                            'timestamp' : datetime.now().strftime("%m-%d-%Y %H:%M:%S"),
+                            'data' : [],}, status = status.HTTP_200_OK )
+
+        return Response({'cid' : str(uuid.uuid4()),
+                        'status' : 'error',
+                        'timestamp' : datetime.now().strftime("%m-%d-%Y %H:%M:%S"),
+                        'data' : [],
+                        'error': 'Not found',
+                        'detailError' : [] }, status = status.HTTP_404_NOT_FOUND )
+
+
+# -------------------------------------------------------------------------------------------------
+# Controller to manage object relationships
+# -------------------------------------------------------------------------------------------------
+
+class RelationshipViewSet( viewsets.ModelViewSet ):
+    serializer_class = RelationshipSerializer
+    http_method_names = ['get','post','patch']
+    permission_classes = (IsAuthenticated,)
+
+    def get_queryset( self, pk = None ):
+        return self.get_serializer().Meta.model.objects.get( 
+                id = pk
+            )
+
+    def retrieve( self, request, pk=None):
         
-        return Response({'error': 'param object required' },  status = status.HTTP_400_BAD_REQUEST )
+        #get parameter to filter by visible value
+        filterVisible = None if self.request.query_params.get('visible') not in ["1","0"] else self.request.query_params.get('visible')
+        
+        #get relation in field
+        dataRelation = Field.objects.filter(
+            type_relation= 2, object_relationship = pk
+            ).values(
+                'object_field'
+            ).annotate(
+                description_object = F('object_field__description'),
+                name_object = F('object_field__name'),
+                icon_object = F('object_field__icon'),
+                name_object_parent = F('object_relationship__name'),
+                icon_object_parent = F('object_relationship__icon')
+            )
+        
+
+        if( list(dataRelation) ):
+            # get relationship available
+            relationshipAva = Relationship.objects.filter( 
+                object_parent = pk, state = True
+                ).values(
+                    'id', 'object_parent' , 'object_child', 'description', 'visible'
+                )
+            
+            jsonData = []
+            for itemObject in list(dataRelation):
+                itemFielTemp = dict()
+                found = False
+                for itemRelation in list(relationshipAva):
+                    if( itemObject.get('object_field') == itemRelation.get('object_child') ):
+                        found = True
+                        itemFielTemp['description'] = itemRelation.get('description')
+                        itemFielTemp['object_parent'] = itemRelation.get('object_parent')
+                        itemFielTemp['object_parent_name'] = itemObject.get('name_object_parent')
+                        itemFielTemp['object_parent_icon'] = itemObject.get('icon_object_parent')
+                        itemFielTemp['object_child'] = itemRelation.get('object_child')
+                        itemFielTemp['object_child_name'] = itemObject.get('name_object')
+                        itemFielTemp['object_child_icon'] = itemObject.get('icon_object')
+                        itemFielTemp['visible'] =  '0' if ( itemRelation.get('visible') == None or itemRelation.get('visible') == '0' ) else '1' 
+                        itemFielTemp['object_parent_descrip'] = itemObject.get('description_object')
+                        itemFielTemp['id_relationship'] = itemRelation.get('id')
+                        
+                if( not found ):
+                    itemFielTemp['description'] = ""
+                    itemFielTemp['object_parent'] = pk
+                    itemFielTemp['object_parent_name'] = itemObject.get('name_object_parent')
+                    itemFielTemp['object_parent_icon'] = itemObject.get('icon_object_parent')
+                    itemFielTemp['object_child'] = itemObject.get('object_field')
+                    itemFielTemp['object_child_name'] = itemObject.get('name_object')
+                    itemFielTemp['object_child_icon'] = itemObject.get('icon_object')
+                    itemFielTemp['visible'] = '0'
+                    itemFielTemp['object_parent_descrip'] = itemObject.get('description_object')
+                    itemFielTemp['id_relationship'] = None
+                        
+                #Validate filter patrams visible
+                if(filterVisible is None):
+                    jsonData.append(itemFielTemp)
+                else:
+                    if(itemFielTemp['visible'] == filterVisible ):
+                        jsonData.append(itemFielTemp)
+
+
+            return Response( {'cid' : str(uuid.uuid4()),
+                            'status' : 'success',
+                            'timestamp' : datetime.now().strftime("%m-%d-%Y %H:%M:%S"),
+                            'data' : jsonData }, status = status.HTTP_200_OK )
+
+        else:
+
+            return Response( {'cid' : str(uuid.uuid4()),
+                            'status' : 'success',
+                            'timestamp' : datetime.now().strftime("%m-%d-%Y %H:%M:%S"),
+                            'data' : {} }, status = status.HTTP_200_OK )
+       
+    def create( self, request):
+       
+        data = request.data
+        success = 0
+        error = 0
+        msgError = []
+
+        for itemRelation in list(data):
+            
+            data = dict()   
+
+            try:
+                relationshipAva = self.get_queryset( itemRelation.get('id_relationship') )
+
+                #if it exists it is updated
+                data['description'] = itemRelation.get('description')
+                data['object_parent'] = itemRelation.get('object_parent')
+                data['object_child'] = itemRelation.get('object_child')
+                data['visible'] = itemRelation.get('visible')
+
+                serializer = self.serializer_class( relationshipAva, data = data )
+
+                if serializer.is_valid():
+                    serializer.save()
+                    success =+ success
+                else:
+                    error += 1
+                    msgError.append(serializer.errors)
+            
+            except self.get_serializer().Meta.model.DoesNotExist:
+
+                #if it does not exist it is created
+                data['description'] = itemRelation.get('description')
+                data['object_parent'] = itemRelation.get('object_parent')
+                data['object_child'] = itemRelation.get('object_child')
+                data['visible'] = itemRelation.get('visible')
+                
+                serializer = self.serializer_class( data = data )
+
+                if serializer.is_valid():
+                    serializer.save()
+                    success =+ success
+                else:
+                    error += 1
+                    #print(serializer.errors)
+                    msgError.append(serializer.errors)
+                    
+
+        if( error > 0):
+            return Response({'cid' : str(uuid.uuid4()),
+                            'status' : 'error',
+                            'timestamp' : datetime.now().strftime("%m-%d-%Y %H:%M:%S"),
+                            'data' : [],
+                            'error': 'Relationship validation error',
+                            'detailError' : msgError }, status = status.HTTP_400_BAD_REQUEST )
+
+        else:
+            return Response( {'cid' : str(uuid.uuid4()),
+                         'status' : 'success',
+                         'timestamp' : datetime.now().strftime("%m-%d-%Y %H:%M:%S"),
+                         'data' : {} }, status = status.HTTP_200_OK )

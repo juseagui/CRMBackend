@@ -34,7 +34,14 @@ class UserListSerializer( serializers.ModelSerializer ):
             'email' : instance['email']
             #'password' : instance['password']
         }
-    
+
+class ChangePasswordSerializer( serializers.Serializer ):
+    class Meta:
+        model = User
+
+        """Serializer for password change endpoint."""
+        old_password = serializers.CharField(required=True)
+        new_password = serializers.CharField(required=True)
 
 
 class TestUserSerializer ( serializers.Serializer ):

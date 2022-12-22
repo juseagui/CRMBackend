@@ -1,0 +1,16 @@
+from django.db import connection
+from collections import namedtuple
+
+""" 
+Class for response standar in model RAW Query
+in the view
+""" 
+class ResponseDataQuery(object):
+    def __init__(self, status, msg = "", data = []):
+        self.status = status
+        self.msg = msg
+        self.data = data
+
+
+class ProcessModelRaw(object):
+    print('entree')

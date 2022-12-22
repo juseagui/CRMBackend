@@ -3,8 +3,9 @@ from apps.base.models import BaseModel
 
 
 class CategoryObject(BaseModel):
-    description = models.CharField('Description', max_length=50,blank = False,null = False,unique = True)
-    icon = models.ImageField('Imagen de Categoria Objetos', upload_to='objects/',blank = True,null = True)
+    name = models.CharField('Name', max_length=25,blank = False,null = False,unique = True)
+    description = models.CharField('Description', max_length=50,blank = False,null = False,unique = False)
+    icon = models.CharField('Icon', max_length=50, blank = True,null = True)
 
     class Meta:
         """Meta definition for MeasureUnit."""
@@ -21,10 +22,13 @@ class Object(BaseModel):
     name = models.CharField('Object name', max_length=150, unique = True,blank = False,null = False)
     description = models.TextField('Object Description',blank = False,null = False)
     icon = models.CharField('Icon', max_length=50, blank = True,null = True)
-    category_object = models.ForeignKey(CategoryObject, on_delete=models.CASCADE, verbose_name = 'Categoria de Objeto')
+    category_object = models.ForeignKey(CategoryObject, on_delete=models.CASCADE, verbose_name = 'category_object', related_name= 'category_object')
     view = models.CharField('View', max_length=150, blank = True,null = True)
-    order = models.IntegerField('Order',  blank = True,null = True)
+    sort = models.IntegerField('Sort',  blank = True,null = True)
     model = models.CharField('Model Database', max_length=150, unique = False,blank = False,null = False)
+
+    #ubication in system
+    visible = models.CharField('Visible', max_length=50, blank = True,null = True)
 
     #Field Configuration __str__
     representation = models.CharField('Representation Object', max_length=150, unique = False,blank = True,null = True)
@@ -42,9 +46,9 @@ class Object(BaseModel):
 # Create your models here.
 class Group(BaseModel):
 
-    name = models.CharField('Nombre del grupo', max_length=150, unique = True,blank = False,null = False)
+    name = models.CharField('Nombre del grupo', max_length=150, unique = False,blank = False,null = False)
     object_group = models.ForeignKey(Object, on_delete=models.CASCADE, verbose_name = 'Objeto')
-    order = models.IntegerField('Order',  blank = True,null = True)
+    sort = models.IntegerField('Sort',  blank = True,null = True)
 
     class Meta:
         """Meta definition for Group."""
@@ -81,14 +85,15 @@ class Field(BaseModel):
     hint = models.CharField('Hint Field', max_length=200, unique = False,blank = True,null = True)
     type = models.IntegerField('Type',  blank = False,null = False)
     type_relation = models.IntegerField('TypeRelation',  blank = True,null = True)
-    order = models.IntegerField('Order',  blank = True,null = True)
+    sort = models.IntegerField('Sort',  blank = True,null = True)
 
     #---------------------------------------------------------------------------------
     # Relation table FK
     #---------------------------------------------------------------------------------
     object_field = models.ForeignKey(Object, on_delete=models.CASCADE,related_name= 'fields' , verbose_name = 'Object')
-    object_group = models.ForeignKey(Group, on_delete=models.CASCADE,related_name= 'groups',  verbose_name = 'Group')
+    object_group = models.ForeignKey(Group, on_delete=models.CASCADE,related_name= 'group_field',  verbose_name = 'Group')
     object_list = models.ForeignKey(List, on_delete=models.CASCADE,related_name= 'lists',  verbose_name = 'List', blank = True,null = True)
+    object_relationship = models.ForeignKey(Object, on_delete=models.CASCADE,related_name= 'relationship',  verbose_name = 'Relationship', blank = True,null = True)
 
     
     #initial information display
@@ -97,6 +102,8 @@ class Field(BaseModel):
     capture = models.CharField('Capture', max_length=50, blank = False,null = False)
     #information display in detail
     detail = models.CharField('Detail', max_length=50, blank = False,null = False)
+    #information display in detail
+    edit = models.CharField('Edit', max_length=50, blank = False,null = False)
     
     #---------------------------------------------------------------------------------
     #props field
@@ -111,6 +118,7 @@ class Field(BaseModel):
 
         verbose_name = 'Field'
         verbose_name_plural = 'Fields'
+        ordering = ['sort']
 
     def __str__(self):
         """Unicode representation of Field."""
@@ -121,8 +129,8 @@ class Field(BaseModel):
 class ValueList(BaseModel):
 
     description = models.CharField('Description Value of List', max_length=150, unique = False,blank = False,null = False)
-    code = models.CharField('Code Value of List', max_length=50, unique = True,blank = False,null = False)
-    order = models.IntegerField('Order Value')
+    code = models.CharField('Code Value of List', max_length=50, unique = False,blank = False,null = False)
+    sort = models.IntegerField('Order Value')
     list = models.ForeignKey(List, on_delete=models.CASCADE,related_name= 'ListValues',  verbose_name = 'ListValues', )
 
     class Meta:
@@ -132,8 +140,71 @@ class ValueList(BaseModel):
         constraints = [
             models.UniqueConstraint(fields=['code', 'list'], name='unique ValueList')
         ]
+        ordering = ['sort']
 
     def __str__(self):
         """Unicode representation of ValueList."""
         return self.description
 
+
+
+# ------------------------------------------------------------
+#-------- MODEL PERMISSIONS
+#-------------------------------------------------------------
+
+class Rol(BaseModel):
+    description = models.CharField('Description Rol', max_length=150, unique = False,blank = False,null = False)
+
+    class Meta:
+        """Meta definition for Rol."""
+        verbose_name = 'Rol'
+        verbose_name_plural = 'Rols'
+    def __str__(self):
+        """Unicode representation of Rol."""
+        return self.description
+
+class Permission(BaseModel):
+    
+    #relation object and rol
+    object_permission = models.ForeignKey(Object, on_delete=models.CASCADE,related_name= 'object_rol' , verbose_name = 'object_rol')
+    rol_permission = models.ForeignKey(Rol, on_delete=models.CASCADE,related_name= 'rol_permission' , verbose_name = 'rol_permission')
+
+    #detail of permissions
+    visible = models.CharField('Visible', max_length=50, blank = True,null = True)
+    add_data = models.CharField('Add Data', max_length=50, blank = True,null = True)
+    edit_data = models.CharField('Edit Data', max_length=50, blank = True,null = True)
+    delete_data = models.CharField('Delete Data', max_length=50, blank = True,null = True)
+
+    constraints = [
+            models.UniqueConstraint(fields=['object_permission', 'rol_permission'], name='unique rol_permission')
+        ]
+
+    class Meta:
+        """Meta definition for rol_permission."""
+        verbose_name = 'Rol permission'
+        verbose_name_plural = 'Rols permission'
+    def __str__(self):
+        """Unicode representation of Rol."""
+        return self.description
+
+
+# ------------------------------------------------------------
+#-------- MODEL OBJECT RELATIONSHIP
+#-------------------------------------------------------------
+
+class Relationship(BaseModel):
+    
+    description = models.CharField('Description Relationship', max_length=150, unique = False,blank = False,null = False)
+    object_parent = models.ForeignKey(Object, on_delete=models.CASCADE,related_name= 'object_parent' , verbose_name = 'object_parent')
+    object_child = models.ForeignKey(Object, on_delete=models.CASCADE,related_name= 'object_child' , verbose_name = 'object_child')
+
+    #detail of functionality
+    visible = models.CharField('Visible', max_length=50, blank = True,null = True)
+
+    class Meta:
+        """Meta definition for relationship."""
+        verbose_name = 'Relation Object'
+        verbose_name_plural = 'Relationship Object'
+    def __str__(self):
+        """Unicode representation of Rol."""
+        return self.description
