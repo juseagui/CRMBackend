@@ -30,6 +30,8 @@ class ReportsProcessViewSet( viewsets.ModelViewSet ):
             dataReport = modelReport.getStateValueProcess()
         elif(typeReport == 'stateCountProcess'):
             dataReport = modelReport.getStateCountProcess()
+        elif(typeReport == 'stateForActivity'):
+            dataReport = modelReport.getStateForActivity()
 
         if( dataReport.status == 'OK' ):
             return Response( {'cid' : str(uuid.uuid4()),

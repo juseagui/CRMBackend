@@ -13,6 +13,9 @@ from apps.processes.api.views.historical_view import HistoricalViewSet
 #import app reports
 from apps.reports.api.views.reports_view import ReportsProcessViewSet, ReportsProgramViewSet
 
+#import app user
+from apps.users.views import UserAccessViewSet
+
 router = DefaultRouter()
 
 # Get Objects
@@ -40,6 +43,9 @@ router.register(r'historical', HistoricalViewSet , basename = 'HistoricalProcese
 # Get reports data
 router.register(r'reports/process', ReportsProcessViewSet , basename = 'ReportsProcess' )
 router.register(r'reports/program', ReportsProgramViewSet , basename = 'ReportsProgram' )
+
+# Change password
+router.register(r'user/changepassword', UserAccessViewSet , basename = 'ChangePassword' )
 
 
 urlpatterns = router.urls 

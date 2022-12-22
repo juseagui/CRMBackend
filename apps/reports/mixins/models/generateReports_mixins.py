@@ -137,3 +137,29 @@ class ReportModelRaw(object):
             
             cursor.close()
         return responseReturn
+
+    """
+    Obtain valuable information and number of leads per opportunity
+    """
+    def getStateForActivity(self ):
+        with connection.cursor() as cursor:
+            try:
+                query  = "SELECT  ACT.description, COUNT(1) count_act, SUM(pro.value) value_total "
+                query += "FROM opportunities OP "
+                query += "INNER JOIN `program` PRO ON PRO.id = OP.program_id "
+                query += "INNER JOIN  processes_historicalprocess HOP  "
+                query += "ON  OP.id = HOP.id_record AND IFNULL(HOP.finish_date, '0') = '0' "
+                query += "LEFT JOIN processes_activity ACT "
+                query += "ON HOP.activity_historical_id = ACT.id "
+                query += "WHERE OP.state = '1'"
+                query += "GROUP BY ACT.id "
+                cursor.execute( query )
+                print(query)
+                results = self.dictfetchall(cursor)
+                responseReturn = ResponseDataQuery('OK','',results)
+            except Exception as err:
+                  msg = 'Failure in executing query {0}. Error: {1}'.format(query, err)
+                  responseReturn = ResponseDataQuery('ERROR',msg, None)
+            
+            cursor.close()
+        return responseReturn
