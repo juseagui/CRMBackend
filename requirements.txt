@@ -21,7 +21,6 @@ itypes==1.2.0
 Jinja2==3.0.3
 jmespath==0.10.0
 MarkupSafe==2.0.1
-mysqlclient==2.1.0
 packaging==21.3
 pathspec==0.9.0
 Pillow==8.4.0
