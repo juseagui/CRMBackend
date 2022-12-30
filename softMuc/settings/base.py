@@ -14,7 +14,7 @@ SECRET_KEY = 'django-insecure-alw@rpurm^c-y*b%2(#^7lq6ls=&v02h&*xm6y%o1)u+ax4f!a
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
 
-ALLOWED_HOSTS = ["*","softmuc-crm.us-east-1.elasticbeanstalk.com"]
+ALLOWED_HOSTS = ["*","crm-env-5.eba-tvvqfm3m.us-west-2.elasticbeanstalk.com"]
 
 
 # Application definition

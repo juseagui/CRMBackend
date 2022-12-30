@@ -3,7 +3,7 @@ from .base import *
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*','softmuc-crm.us-east-1.elasticbeanstalk.com']
+ALLOWED_HOSTS = ['*','crm-env-5.eba-tvvqfm3m.us-west-2.elasticbeanstalk.com']
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
